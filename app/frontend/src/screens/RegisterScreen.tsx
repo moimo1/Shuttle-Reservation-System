@@ -7,35 +7,45 @@ import {
   StyleSheet 
 } from "react-native";
 
-export default function LoginScreen() {
-  const [email, setEmail] = useState("");
+export default function RegisterScreen({ navigation }) {
+  const [name, setName] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
-  const handleLogin = () => {
-    if (!email || !password) {
-      setError("Please fill in both fields");
+  const handleRegister = () => {
+    if (!name || !username || !password) {
+      setError("Please fill in all fields");
       return;
     }
 
     setError("");
-    // TODO: Add authentication logic here
-    console.log("Logging in with:", email, password);
+    // TODO: Add registration logic here (e.g., API call)
+    console.log("Registering with:", name, username, password);
+    // After registration, navigate to the login screen
+    navigation.navigate('Login');
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Welcome Back</Text>
+      <Text style={styles.title}>Create an Account</Text>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
       <TextInput
-        placeholder="Email"
+        placeholder="Full Name"
         placeholderTextColor="#aaa"
         style={styles.input}
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
+        value={name}
+        onChangeText={setName}
+      />
+
+      <TextInput
+        placeholder="Username"
+        placeholderTextColor="#aaa"
+        style={styles.input}
+        value={username}
+        onChangeText={setUsername}
         autoCapitalize="none"
       />
 
@@ -48,16 +58,12 @@ export default function LoginScreen() {
         secureTextEntry
       />
 
-      <TouchableOpacity style={styles.button} onPress={handleLogin}>
-        <Text style={styles.buttonText}>Login</Text>
+      <TouchableOpacity style={styles.button} onPress={handleRegister}>
+        <Text style={styles.buttonText}>Register</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-        <Text style={styles.link}>Don't have an account? Register</Text>
-      </TouchableOpacity>
-      
-      <TouchableOpacity>
-        <Text style={styles.link}>Forgot Password?</Text>
+      <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+        <Text style={styles.link}>Already have an account? Login</Text>
       </TouchableOpacity>
     </View>
   );
