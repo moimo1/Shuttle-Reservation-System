@@ -10,9 +10,7 @@ export const getUserReservations = async (req: any, res: any) => {
   }
 };
 
-// ...existing code...
-
-export const cancelReservation = async (req: Request, res: Response) => {
+export const cancelReservation = async (req: any, res: any) => {
   try {
     const { reservationId } = req.params;
     const userId = req.user?.id;
@@ -29,7 +27,7 @@ export const cancelReservation = async (req: Request, res: Response) => {
     }
 
     // Verify the reservation belongs to the authenticated user
-    if (reservation.userId.toString() !== userId) {
+    if (reservation.user.toString() !== userId) {
       return res.status(403).json({ message: "Unauthorized to cancel this reservation" });
     }
 
@@ -40,7 +38,7 @@ export const cancelReservation = async (req: Request, res: Response) => {
 
     // Update shuttle to increment available seats
     await Shuttle.findByIdAndUpdate(
-      reservation.shuttleId,
+      reservation.shuttle,
       { $inc: { availableSeats: 1 } }
     );
 
@@ -59,4 +57,4 @@ export const cancelReservation = async (req: Request, res: Response) => {
   }
 };
 
-// ...existing code...
+
