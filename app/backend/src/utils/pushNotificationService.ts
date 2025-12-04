@@ -1,6 +1,5 @@
 export const sendPushNotification = (deviceTokens: string[], title: string, message: string, data?: any) => {
   try {
-    // Push notification payload
     const payload = {
       notification: {
         title: title,
@@ -9,7 +8,6 @@ export const sendPushNotification = (deviceTokens: string[], title: string, mess
       data: data || {},
     };
 
-    // Log for demonstration (integrate with FCM, OneSignal, or similar service)
     console.log("Push notification sent:", {
       deviceTokens,
       payload,
