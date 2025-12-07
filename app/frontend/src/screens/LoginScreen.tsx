@@ -1,17 +1,31 @@
 import React, { useState } from "react";
-import { 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  StyleSheet 
-} from "react-native";
+import {  View, Text, TextInput, 
+  TouchableOpacity, StyleSheet } from "react-native";
 import { useNavigation, NavigationProp } from '@react-navigation/native'; // Import useNavigation
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+
+import ScheduleScreen from "./ScheduleScreen";
+import MapScreen from "./MapScreen";
+import ProfileScreen from "./ProfileScreen";
 
 type RootStackParamList = {
   Login: undefined;
   Register: undefined;
+  MainTabs: undefined;
 };
+
+const Tab = createBottomTabNavigator();
+
+// Bottom Tab Navigator
+function MainTabs() {
+  return (
+    <Tab.Navigator screenOptions={{ headerShown: false }}>
+      <Tab.Screen name="Schedule" component={ScheduleScreen} />
+      <Tab.Screen name="Map" component={MapScreen} />
+      <Tab.Screen name="Profile" component={ProfileScreen} />
+    </Tab.Navigator>
+  );
+}
 
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
@@ -21,14 +35,15 @@ export default function LoginScreen() {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();  // Get the navigation object from the hook
 
   const handleLogin = () => {
-    if (!email || !password) {
-      setError("Please fill in both fields");
-      return;
-    }
+    // if (!email || !password) {
+    //   setError("Please fill in both fields");
+    //   return;
+    // }
 
     setError("");
     // TODO: Add authentication logic here
     console.log("Logging in with:", email, password);
+    navigation.navigate('MainTabs'); // Navigate to MainTabs on successful login
   };
 
   return (
