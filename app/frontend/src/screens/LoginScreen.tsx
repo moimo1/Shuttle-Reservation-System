@@ -6,11 +6,19 @@ import {
   TouchableOpacity, 
   StyleSheet 
 } from "react-native";
+import { useNavigation, NavigationProp } from '@react-navigation/native'; // Import useNavigation
+
+type RootStackParamList = {
+  Login: undefined;
+  Register: undefined;
+};
 
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+
+  const navigation = useNavigation<NavigationProp<RootStackParamList>>();  // Get the navigation object from the hook
 
   const handleLogin = () => {
     if (!email || !password) {

@@ -6,8 +6,13 @@ import {
   TouchableOpacity, 
   StyleSheet 
 } from "react-native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
-export default function RegisterScreen({ navigation }) {
+type RegisterScreenProps = {
+  navigation: NativeStackNavigationProp<any>;
+};
+
+export default function RegisterScreen({ navigation }: RegisterScreenProps) {
   const [name, setName] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
