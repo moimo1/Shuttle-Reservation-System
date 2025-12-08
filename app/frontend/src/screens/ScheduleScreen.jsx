@@ -12,7 +12,8 @@ import {
   View,
 } from "react-native";
 import AppHeader from "../components/AppHeader";
-import { fetchShuttles } from "../services/shuttleService";
+import { fetchShuttles, reserveSeat } from "../services/shuttleService";
+import { getAuthToken } from "../services/authService";
 
 export default function ViewScheduleScreen() {
   const [shuttles, setShuttles] = useState([]);
@@ -21,6 +22,8 @@ export default function ViewScheduleScreen() {
   const [selectedTrip, setSelectedTrip] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedSeat, setSelectedSeat] = useState(null);
+  const [reserveMessage, setReserveMessage] = useState("");
+  const [reserving, setReserving] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -38,28 +41,34 @@ export default function ViewScheduleScreen() {
 
   const trips = useMemo(
     () =>
-      shuttles.map((shuttle, idx) => ({
-        id: shuttle._id || String(idx),
-        title: `SCHEDULED TRIP ${idx + 1}`,
-        time: shuttle.departureTime || "TBD",
-        route: shuttle.name || "Route not set",
-        seats: `${shuttle.seatsAvailable ?? 0} seats left`,
-        seatsAvailable: shuttle.seatsAvailable ?? 0,
-      })),
+      shuttles.map((shuttle, idx) => {
+        const destination = shuttle.destination || shuttle.name || "Route not set";
+        const formattedRoute = destination.replace(/->/g, "→").replace(/\s*->\s*/g, " → ");
+        return {
+          id: shuttle._id || String(idx),
+          shuttleId: shuttle._id,
+          title: `SCHEDULED TRIP ${idx + 1}`,
+          time: shuttle.departureTime || "TBD",
+          route: formattedRoute,
+          seats: `${shuttle.seatsAvailable ?? 0} seats left`,
+          seatsAvailable: shuttle.seatsAvailable ?? 0,
+          takenSeats: shuttle.takenSeats || [],
+        };
+      }),
     [shuttles]
   );
 
   const seatMap = useMemo(() => {
     if (!selectedTrip) return [];
     const totalSeats = 20;
-    const availableCount = Math.max(
-      0,
-      Math.min(totalSeats, selectedTrip.seatsAvailable || 0)
-    );
-    return Array.from({ length: totalSeats }, (_, i) => ({
-      number: i + 1,
-      available: i < availableCount,
-    }));
+    const takenSet = new Set(selectedTrip.takenSeats || []);
+    return Array.from({ length: totalSeats }, (_, i) => {
+      const num = i + 1;
+      return {
+        number: num,
+        available: !takenSet.has(num),
+      };
+    });
   }, [selectedTrip]);
 
   const seatRows = useMemo(() => {
@@ -73,13 +82,63 @@ export default function ViewScheduleScreen() {
   const handleTripPress = (trip) => {
     setSelectedTrip(trip);
     setSelectedSeat(null);
+    setReserveMessage("");
     setModalVisible(true);
   };
 
-  const handleClose = () => {
+  const handleClose = async () => {
     setModalVisible(false);
     setSelectedTrip(null);
     setSelectedSeat(null);
+    setReserveMessage("");
+    // Refresh shuttles to get latest seat availability
+    try {
+      const data = await fetchShuttles();
+      setShuttles(data);
+    } catch (err) {
+      console.error("Failed to refresh shuttles:", err);
+    }
+  };
+
+  const handleReserve = async () => {
+    if (!selectedTrip) return;
+    if (!selectedSeat) {
+      setReserveMessage("Please select a seat.");
+      return;
+    }
+    try {
+      setReserving(true);
+      setReserveMessage("");
+      const token = getAuthToken();
+      await reserveSeat(
+        selectedTrip.shuttleId || selectedTrip.id,
+        selectedSeat,
+        selectedTrip.route || "Destination",
+        token
+      );
+      setReserveMessage("Seat reserved!");
+      // Refresh shuttles to reflect updated seats
+      const data = await fetchShuttles();
+      setShuttles(data);
+      // update selectedTrip taken seats
+      const updated = data.find((s) => s._id === selectedTrip.shuttleId);
+      if (updated) {
+        setSelectedTrip((prev) =>
+          prev
+            ? {
+                ...prev,
+                seatsAvailable: updated.seatsAvailable,
+                takenSeats: updated.takenSeats || [],
+                seats: `${updated.seatsAvailable ?? 0} seats left`,
+              }
+            : prev
+        );
+      }
+    } catch (err) {
+      setReserveMessage(err?.message || "Reservation failed");
+    } finally {
+      setReserving(false);
+    }
   };
 
   return (
@@ -139,9 +198,7 @@ export default function ViewScheduleScreen() {
                 {!!trip.time && (
                   <Text style={styles.detailText}>Time: {trip.time}</Text>
                 )}
-                {!!trip.route && (
-                  <Text style={styles.detailText}>Route: {trip.route}</Text>
-                )}
+                <Text style={styles.detailText}>Route: {trip.route}</Text>
                 {!!trip.seats && (
                   <Text style={styles.detailText}>
                     Available Seats: {trip.seats}
@@ -218,9 +275,20 @@ export default function ViewScheduleScreen() {
               ))}
             </View>
 
-            <TouchableOpacity style={styles.reserveButton} activeOpacity={0.9}>
-              <Text style={styles.reserveText}>RESERVE SEAT</Text>
+            <TouchableOpacity
+              style={styles.reserveButton}
+              activeOpacity={0.9}
+              onPress={handleReserve}
+              disabled={reserving}
+            >
+              <Text style={styles.reserveText}>
+                {reserving ? "RESERVING..." : "RESERVE SEAT"}
+              </Text>
             </TouchableOpacity>
+
+            {!!reserveMessage && (
+              <Text style={styles.reserveMessage}>{reserveMessage}</Text>
+            )}
 
             {selectedTrip && (
               <View style={styles.modalFooter}>
@@ -450,5 +518,12 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "700",
     color: "#000",
+  },
+  reserveMessage: {
+    textAlign: "center",
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#000",
+    marginTop: 6,
   },
 });

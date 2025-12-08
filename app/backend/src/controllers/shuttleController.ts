@@ -1,37 +1,104 @@
 import Shuttle from "../models/Shuttle.js";
 import Reservation from "../models/Reservation.js";
 
+const TOTAL_SEATS = 20;
+
 export const getShuttles = async (req: any, res: any) => {
   try {
     const shuttles = await Shuttle.find();
-    res.json(shuttles);
+    const reservations = await Reservation.find(
+      { status: "active" },
+      "shuttle seatNumber"
+    );
+
+    const takenMap: Record<string, number[]> = {};
+    reservations.forEach((r: any) => {
+      // Handle both ObjectId and string formats
+      const shuttleId = r.shuttle?._id ? r.shuttle._id.toString() : r.shuttle?.toString();
+      if (!shuttleId) return;
+      
+      // Ensure seatNumber is parsed as integer
+      const seatNum = typeof r.seatNumber === "number" 
+        ? r.seatNumber 
+        : parseInt(r.seatNumber, 10);
+      
+      if (!isNaN(seatNum) && seatNum >= 1 && seatNum <= TOTAL_SEATS) {
+        if (!takenMap[shuttleId]) takenMap[shuttleId] = [];
+        takenMap[shuttleId].push(seatNum);
+      }
+    });
+
+    const enriched = shuttles.map((s: any) => {
+      const shuttleIdStr = s._id.toString();
+      const takenSeats = (takenMap[shuttleIdStr] || []).sort((a, b) => a - b);
+      const seatsAvailable = Math.max(0, TOTAL_SEATS - takenSeats.length);
+      
+      return {
+        ...s.toObject(),
+        seatsAvailable, // Always calculate from reservations, ignore stored value
+        takenSeats,
+      };
+    });
+
+    res.json(enriched);
   } catch (err) {
+    console.error("Error fetching shuttles:", err);
     res.status(500).json({ message: "Server error" });
   }
 };
 
 export const reserveShuttle = async (req: any, res: any) => {
   try {
-    const { destination } = req.body;
+    const { destination, seatNumber } = req.body;
     if (!destination) return res.status(400).json({ message: "Destination is required" });
+    
+    // Ensure seatNumber is parsed as an integer
+    const parsedSeatNumber = parseInt(seatNumber, 10);
+    if (isNaN(parsedSeatNumber) || parsedSeatNumber < 1 || parsedSeatNumber > TOTAL_SEATS)
+      return res.status(400).json({ message: "Invalid seat number" });
 
     const shuttle = await Shuttle.findById(req.params.shuttleId);
     if (!shuttle) return res.status(404).json({ message: "Shuttle not found" });
-    if (shuttle.seatsAvailable <= 0)
+
+    console.log(`Reserving seat ${parsedSeatNumber} for shuttle ${req.params.shuttleId}`);
+
+    const existing = await Reservation.findOne({
+      shuttle: shuttle._id,
+      seatNumber: parsedSeatNumber,
+      status: "active",
+    });
+    if (existing) return res.status(400).json({ message: "Seat already taken" });
+
+    const reservedCount = await Reservation.countDocuments({
+      shuttle: shuttle._id,
+      status: "active",
+    });
+    if (reservedCount >= TOTAL_SEATS)
       return res.status(400).json({ message: "No seats available" });
 
     const reservation = await Reservation.create({
       user: req.user.id,
       shuttle: shuttle._id,
-      seatNumber: shuttle.seatsAvailable,
-      destination: destination,
+      seatNumber: parsedSeatNumber,
+      destination,
     });
 
-    shuttle.seatsAvailable -= 1;
-    await shuttle.save();
+    console.log(`Reservation created: seat ${reservation.seatNumber} for shuttle ${shuttle._id}`);
 
-    res.json(reservation);
+    // Don't update shuttle.seatsAvailable - it's calculated from reservations
+    // Calculate current availability for response
+    const newReservedCount = reservedCount + 1;
+    const seatsAvailable = Math.max(0, TOTAL_SEATS - newReservedCount);
+
+    res.json({ 
+      reservation: {
+        ...reservation.toObject(),
+        seatNumber: reservation.seatNumber, // Ensure seatNumber is included
+      }, 
+      seatsAvailable 
+    });
   } catch (err) {
+    console.error("Error reserving seat:", err);
     res.status(500).json({ message: "Server error" });
   }
 };
