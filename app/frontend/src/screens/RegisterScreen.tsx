@@ -7,6 +7,7 @@ import {
   StyleSheet 
 } from "react-native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { register } from "../services/authService";
 
 type RegisterScreenProps = {
   navigation: NativeStackNavigationProp<any>;
@@ -14,21 +15,23 @@ type RegisterScreenProps = {
 
 export default function RegisterScreen({ navigation }: RegisterScreenProps) {
   const [name, setName] = useState("");
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
-  const handleRegister = () => {
-    if (!name || !username || !password) {
+  const handleRegister = async () => {
+    if (!name || !email || !password) {
       setError("Please fill in all fields");
       return;
     }
 
     setError("");
-    // TODO: Add registration logic here (e.g., API call)
-    console.log("Registering with:", name, username, password);
-    // After registration, navigate to the login screen
-    navigation.navigate('Login');
+    try {
+      await register(name, email, password);
+      navigation.navigate('Login');
+    } catch (err: any) {
+      setError(err.message || "Registration failed. Please try again.");
+    }
   };
 
   return (
@@ -46,11 +49,12 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
       />
 
       <TextInput
-        placeholder="Username"
+        placeholder="Email"
         placeholderTextColor="#aaa"
         style={styles.input}
-        value={username}
-        onChangeText={setUsername}
+        value={email}
+        onChangeText={setEmail}
+        keyboardType="email-address"
         autoCapitalize="none"
       />
 

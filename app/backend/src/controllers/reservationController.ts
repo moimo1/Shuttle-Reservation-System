@@ -3,11 +3,15 @@ import Shuttle from "../models/Shuttle.js";
 
 export const createReservation = async (req: any, res: any) => {
   try {
-    const { shuttleId } = req.body;
+    const { shuttleId, destination } = req.body;
     const userId = req.user?.id;
 
     if (!shuttleId) {
       return res.status(400).json({ message: "Shuttle ID is required" });
+    }
+
+    if (!destination) {
+      return res.status(400).json({ message: "Destination is required" });
     }
 
     const shuttle = await Shuttle.findById(shuttleId);
@@ -15,20 +19,19 @@ export const createReservation = async (req: any, res: any) => {
       return res.status(404).json({ message: "Shuttle not found" });
     }
 
-    // Check if there are any available seats on the shuttle for today
     if (shuttle.seatsAvailable <= 0) {
       return res.status(400).json({ message: "No available seats on this shuttle for today" });
     }
 
-    // Create and save the new reservation
     const reservation = new Reservation({
       user: userId,
       shuttle: shuttleId,
+      seatNumber: shuttle.seatsAvailable,
+      destination: destination,
     });
     await reservation.save();
 
-    // Decrement the available seats on the shuttle
-    await Shuttle.findByIdAndUpdate(shuttleId, { $inc: { availableSeats: -1 } });
+    await Shuttle.findByIdAndUpdate(shuttleId, { $inc: { seatsAvailable: -1 } });
 
     res.status(201).json({
       message: "Reservation created successfully",
@@ -74,7 +77,7 @@ export const cancelReservation = async (req: any, res: any) => {
 
     await Shuttle.findByIdAndUpdate(
       reservation.shuttle,
-      { $inc: { availableSeats: 1 } }
+      { $inc: { seatsAvailable: 1 } }
     );
 
     // Update reservation status to cancelled

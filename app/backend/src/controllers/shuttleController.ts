@@ -12,6 +12,9 @@ export const getShuttles = async (req: any, res: any) => {
 
 export const reserveShuttle = async (req: any, res: any) => {
   try {
+    const { destination } = req.body;
+    if (!destination) return res.status(400).json({ message: "Destination is required" });
+
     const shuttle = await Shuttle.findById(req.params.shuttleId);
     if (!shuttle) return res.status(404).json({ message: "Shuttle not found" });
     if (shuttle.seatsAvailable <= 0)
@@ -21,6 +24,7 @@ export const reserveShuttle = async (req: any, res: any) => {
       user: req.user.id,
       shuttle: shuttle._id,
       seatNumber: shuttle.seatsAvailable,
+      destination: destination,
     });
 
     shuttle.seatsAvailable -= 1;

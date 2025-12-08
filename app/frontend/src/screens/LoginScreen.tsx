@@ -3,6 +3,7 @@ import {  View, Text, TextInput,
   TouchableOpacity, StyleSheet } from "react-native";
 import { useNavigation, NavigationProp } from '@react-navigation/native'; // Import useNavigation
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { login } from "../services/authService";
 
 import ScheduleScreen from "./ScheduleScreen";
 import MapScreen from "./MapScreen";
@@ -34,16 +35,19 @@ export default function LoginScreen() {
 
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();  // Get the navigation object from the hook
 
-  const handleLogin = () => {
-    // if (!email || !password) {
-    //   setError("Please fill in both fields");
-    //   return;
-    // }
+  const handleLogin = async () => {
+    if (!email || !password) {
+      setError("Please fill in both fields");
+      return;
+    }
 
     setError("");
-    // TODO: Add authentication logic here
-    console.log("Logging in with:", email, password);
-    navigation.navigate('MainTabs'); // Navigate to MainTabs on successful login
+    try {
+      await login(email, password);
+      navigation.navigate('MainTabs');
+    } catch (err: any) {
+      setError(err.message || "Login failed. Please check your credentials.");
+    }
   };
 
   return (
