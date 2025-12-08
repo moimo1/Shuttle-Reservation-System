@@ -22,10 +22,11 @@ export const createReservation = async (req: any, res: any) => {
     const reservation = new Reservation({
       user: userId,
       shuttle: shuttleId,
+      seatNumber: shuttle.seatsAvailable,
     });
     await reservation.save();
 
-    await Shuttle.findByIdAndUpdate(shuttleId, { $inc: { availableSeats: -1 } });
+    await Shuttle.findByIdAndUpdate(shuttleId, { $inc: { seatsAvailable: -1 } });
 
     res.status(201).json({
       message: "Reservation created successfully",
@@ -71,7 +72,7 @@ export const cancelReservation = async (req: any, res: any) => {
 
     await Shuttle.findByIdAndUpdate(
       reservation.shuttle,
-      { $inc: { availableSeats: 1 } }
+      { $inc: { seatsAvailable: 1 } }
     );
 
     // Update reservation status to cancelled
