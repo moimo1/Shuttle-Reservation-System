@@ -1,4 +1,6 @@
-const API_BASE_URL = "http://localhost:5000/api";
+const API_BASE_URL = __DEV__ 
+  ? "http://192.168.1.2:5000/api"  // Development: use your computer's IP
+  : "http://localhost:5000/api";    // Production: adjust as needed
 
 export const register = async (name: string, email: string, password: string) => {
   try {
