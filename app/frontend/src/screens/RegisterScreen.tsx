@@ -14,19 +14,19 @@ type RegisterScreenProps = {
 
 export default function RegisterScreen({ navigation }: RegisterScreenProps) {
   const [name, setName] = useState("");
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
   const handleRegister = () => {
-    if (!name || !username || !password) {
+    if (!name || !email || !password) {
       setError("Please fill in all fields");
       return;
     }
 
     setError("");
     // TODO: Add registration logic here (e.g., API call)
-    console.log("Registering with:", name, username, password);
+    console.log("Registering with:", name, email, password);
     // After registration, navigate to the login screen
     navigation.navigate('Login');
   };
@@ -46,11 +46,12 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
       />
 
       <TextInput
-        placeholder="Username"
+        placeholder="Email"
         placeholderTextColor="#aaa"
         style={styles.input}
-        value={username}
-        onChangeText={setUsername}
+        value={email}
+        onChangeText={setEmail}
+        keyboardType="email-address"
         autoCapitalize="none"
       />
 
