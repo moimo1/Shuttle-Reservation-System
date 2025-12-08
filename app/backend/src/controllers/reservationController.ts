@@ -3,11 +3,15 @@ import Shuttle from "../models/Shuttle.js";
 
 export const createReservation = async (req: any, res: any) => {
   try {
-    const { shuttleId } = req.body;
+    const { shuttleId, destination } = req.body;
     const userId = req.user?.id;
 
     if (!shuttleId) {
       return res.status(400).json({ message: "Shuttle ID is required" });
+    }
+
+    if (!destination) {
+      return res.status(400).json({ message: "Destination is required" });
     }
 
     const shuttle = await Shuttle.findById(shuttleId);
@@ -23,6 +27,7 @@ export const createReservation = async (req: any, res: any) => {
       user: userId,
       shuttle: shuttleId,
       seatNumber: shuttle.seatsAvailable,
+      destination: destination,
     });
     await reservation.save();
 
