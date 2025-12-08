@@ -1,4 +1,10 @@
 {
+  "scripts": {
+    "start": "cd app/backend && npm run dev",
+    "start:backend": "cd app/backend && npm run dev",
+    "start:frontend": "cd app/frontend && npm start",
+    "build:backend": "cd app/backend && npm run build"
+  },
   "devDependencies": {
     "@types/jest": "^30.0.0",
     "@types/supertest": "^6.0.3",

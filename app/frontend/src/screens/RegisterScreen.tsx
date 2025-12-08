@@ -7,6 +7,7 @@ import {
   StyleSheet 
 } from "react-native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { register } from "../services/authService";
 
 type RegisterScreenProps = {
   navigation: NativeStackNavigationProp<any>;
@@ -18,17 +19,19 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
     if (!name || !email || !password) {
       setError("Please fill in all fields");
       return;
     }
 
     setError("");
-    // TODO: Add registration logic here (e.g., API call)
-    console.log("Registering with:", name, email, password);
-    // After registration, navigate to the login screen
-    navigation.navigate('Login');
+    try {
+      await register(name, email, password);
+      navigation.navigate('Login');
+    } catch (err: any) {
+      setError(err.message || "Registration failed. Please try again.");
+    }
   };
 
   return (
