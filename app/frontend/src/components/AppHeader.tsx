@@ -1,34 +1,55 @@
 import React from "react";
-import { Image, StyleSheet, TouchableOpacity, View } from "react-native";
+import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type Props = {
   onNotifPress?: () => void;
+  unreadCount?: number;
+  subtitle?: string;
 };
 
-export default function AppHeader({ onNotifPress }: Props) {
-  return (
-    <View style={styles.container}>
-      <View style={styles.iconButton} />
+export default function AppHeader({ onNotifPress, unreadCount = 3, subtitle }: Props) {
+  const insets = useSafeAreaInsets();
 
-      <View style={styles.logoWrap}>
-        <Image
-          source={require("../../assets/routereserve-icon.png")}
-          style={styles.logo}
-          resizeMode="contain"
-        />
+  return (
+    <View style={[styles.container, { paddingTop: insets.top + 10 }]}>
+      <View style={styles.accentBubble} />
+      <View style={styles.accentBubbleSmall} />
+
+      <View style={styles.row}>
+        <View style={styles.brandPill}>
+          <View style={styles.logoCircle}>
+            <Image
+              source={require("../../assets/routereserve-icon.png")}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+          </View>
+          <View style={styles.titleStack}>
+            <Text style={styles.appName}>Routereserve</Text>
+            <Text style={styles.tagline}>{subtitle || "Your seat, your route"}</Text>
+          </View>
+        </View>
+
+        <TouchableOpacity
+          onPress={onNotifPress}
+          activeOpacity={0.85}
+          style={styles.iconButton}
+        >
+          <Ionicons name="notifications-outline" size={22} color="#0f2553" />
+          {unreadCount > 0 ? (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{unreadCount}</Text>
+            </View>
+          ) : null}
+        </TouchableOpacity>
       </View>
 
-      <TouchableOpacity
-        onPress={onNotifPress}
-        activeOpacity={0.8}
-        style={styles.iconButton}
-      >
-        <Image
-          source={require("../../assets/notifIcon.png")}
-          style={styles.icon}
-          resizeMode="contain"
-        />
-      </TouchableOpacity>
+      <View style={styles.bottomRow}>
+        <View style={styles.statusDot} />
+        <Text style={styles.statusText}>Live shuttle updates enabled</Text>
+      </View>
     </View>
   );
 }
@@ -36,33 +57,133 @@ export default function AppHeader({ onNotifPress }: Props) {
 const styles = StyleSheet.create({
   container: {
     width: "100%",
-    height: 96,
-    backgroundColor: "#4169e1", // royal blue
+    backgroundColor: "#1142a4",
+    paddingHorizontal: 18,
+    paddingBottom: 16,
+    borderBottomLeftRadius: 18,
+    borderBottomRightRadius: 18,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 8,
+  },
+  accentBubble: {
+    position: "absolute",
+    top: -40,
+    right: -20,
+    height: 140,
+    width: 140,
+    backgroundColor: "rgba(255,255,255,0.08)",
+    borderRadius: 80,
+  },
+  accentBubbleSmall: {
+    position: "absolute",
+    bottom: -26,
+    left: -18,
+    height: 86,
+    width: 86,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    borderRadius: 60,
+  },
+  row: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    gap: 12,
   },
-  logoWrap: {
+  brandPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: "rgba(255,255,255,0.12)",
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     flex: 1,
+  },
+  logoCircle: {
+    height: 46,
+    width: 46,
+    borderRadius: 12,
+    backgroundColor: "#fff",
     alignItems: "center",
     justifyContent: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
   },
   logo: {
-    height: 60,
-    width: 180,
+    height: 36,
+    width: 36,
+  },
+  titleStack: {
+    flex: 1,
+  },
+  appName: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "900",
+    letterSpacing: 0.3,
+  },
+  tagline: {
+    color: "#d9e3ff",
+    fontSize: 12,
+    fontWeight: "700",
   },
   iconButton: {
-    height: 44,
-    width: 44,
-    borderRadius: 22,
+    height: 46,
+    width: 46,
+    borderRadius: 14,
+    backgroundColor: "#fff",
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
+    shadowColor: "#000",
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
+  },
+  badge: {
+    position: "absolute",
+    top: -4,
+    right: -4,
+    minWidth: 18,
+    height: 18,
+    paddingHorizontal: 5,
+    borderRadius: 9,
+    backgroundColor: "#ff4d6d",
     alignItems: "center",
     justifyContent: "center",
   },
-  icon: {
-    height: 26,
-    width: 26,
+  badgeText: {
+    color: "#fff",
+    fontSize: 11,
+    fontWeight: "800",
+  },
+  bottomRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 12,
+    gap: 8,
+  },
+  statusDot: {
+    height: 10,
+    width: 10,
+    borderRadius: 5,
+    backgroundColor: "#48e08f",
+    shadowColor: "#48e08f",
+    shadowOpacity: 0.5,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 0 },
+  },
+  statusText: {
+    color: "#e9f0ff",
+    fontSize: 12,
+    fontWeight: "700",
   },
 });
-

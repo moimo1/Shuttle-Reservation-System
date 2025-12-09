@@ -74,7 +74,8 @@ export default function LoginScreen() {
         navigation.navigate("PassengerTabs");
       }
     } catch (err: any) {
-      setError(err.message || "Login failed. Please check your credentials.");
+      const msg = err?.message || "Login failed. Please check your credentials.";
+      setError(msg);
     }
   };
 
