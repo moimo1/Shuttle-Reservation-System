@@ -17,6 +17,26 @@ export const setCurrentUser = (user: any | null) => {
 
 export const getCurrentUser = () => currentUser;
 
+export const updateAvatar = async (avatarUrl: string, token?: string | null) => {
+  const auth = token || authToken;
+  const response = await fetch(`${API_BASE_URL}/auth/avatar`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      ...(auth ? { Authorization: `Bearer ${auth}` } : {}),
+    },
+    body: JSON.stringify({ avatarUrl }),
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data?.message || "Failed to update avatar");
+  }
+
+  if (data?.user) setCurrentUser(data.user);
+  return data;
+};
+
 export const register = async (
   name: string,
   email: string,

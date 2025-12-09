@@ -54,6 +54,7 @@ export default function DriverHistoryScreen() {
   const [dateFilter, setDateFilter] = useState("");
   const [destinationFilter, setDestinationFilter] = useState("");
   const [minPassengers, setMinPassengers] = useState("");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const filteredHistory = useMemo(() => {
     return MOCK_HISTORY.filter((trip) => {
@@ -69,6 +70,17 @@ export default function DriverHistoryScreen() {
     });
   }, [dateFilter, destinationFilter, minPassengers]);
 
+  const totalPassengers = useMemo(
+    () => filteredHistory.reduce((sum, trip) => sum + trip.passengerCount, 0),
+    [filteredHistory]
+  );
+
+  const clearFilters = () => {
+    setDateFilter("");
+    setDestinationFilter("");
+    setMinPassengers("");
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="light-content" />
@@ -82,8 +94,30 @@ export default function DriverHistoryScreen() {
           <Text style={styles.dateText}>DRIVING HISTORY</Text>
         </View>
 
+        <View style={styles.kpiRow}>
+          <View style={styles.kpiCard}>
+            <Text style={styles.kpiLabel}>Trips</Text>
+            <Text style={styles.kpiValue}>{filteredHistory.length}</Text>
+          </View>
+          <View style={styles.kpiCard}>
+            <Text style={styles.kpiLabel}>Passengers</Text>
+            <Text style={styles.kpiValue}>{totalPassengers}</Text>
+          </View>
+          <View style={styles.kpiCard}>
+            <Text style={styles.kpiLabel}>Filters</Text>
+            <Text style={styles.kpiValue}>
+              {[dateFilter, destinationFilter, minPassengers].filter(Boolean).length}
+            </Text>
+          </View>
+        </View>
+
         <View style={styles.filterCard}>
-          <Text style={styles.filterLabel}>Filter trips</Text>
+          <View style={styles.filterHeader}>
+            <Text style={styles.filterLabel}>Filter trips</Text>
+            <TouchableOpacity onPress={clearFilters}>
+              <Text style={styles.clearText}>Clear</Text>
+            </TouchableOpacity>
+          </View>
           <TextInput
             placeholder="Date (YYYY-MM-DD)"
             placeholderTextColor="#666"
@@ -108,24 +142,55 @@ export default function DriverHistoryScreen() {
           />
         </View>
 
-        {filteredHistory.map((trip) => (
-          <View key={trip.id} style={styles.tripCard}>
-            <Text style={styles.tripTitle}>{trip.route}</Text>
-            <Text style={styles.detailText}>Date: {trip.date}</Text>
-            <Text style={styles.detailText}>Time: {trip.time}</Text>
-            <Text style={styles.detailText}>Passengers: {trip.passengerCount}</Text>
-
-            <Text style={[styles.detailText, styles.sectionLabel]}>Passengers</Text>
-            <View style={styles.passengerList}>
-              {trip.passengers.map((p, idx) => (
-                <View key={`${p.name}-${idx}`} style={styles.passengerRow}>
-                  <Text style={styles.passengerName}>{p.name}</Text>
-                  <Text style={styles.passengerDest}>{p.destination}</Text>
+        {filteredHistory.map((trip) => {
+          const expanded = expandedId === trip.id;
+          return (
+            <View key={trip.id} style={styles.tripCard}>
+              <View style={styles.tripHeader}>
+                <View>
+                  <Text style={styles.tripTitle}>{trip.route}</Text>
+                  <Text style={styles.detailText}>
+                    {trip.date} • {trip.time}
+                  </Text>
                 </View>
-              ))}
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{trip.passengerCount} pax</Text>
+                </View>
+              </View>
+
+              <View style={styles.tripMetaRow}>
+                <Text style={styles.metaLabel}>Date</Text>
+                <Text style={styles.metaValue}>{trip.date}</Text>
+              </View>
+              <View style={styles.tripMetaRow}>
+                <Text style={styles.metaLabel}>Time</Text>
+                <Text style={styles.metaValue}>{trip.time}</Text>
+              </View>
+              <View style={styles.tripMetaRow}>
+                <Text style={styles.metaLabel}>Route</Text>
+                <Text style={styles.metaValue}>{trip.route}</Text>
+              </View>
+
+              <TouchableOpacity
+                style={styles.togglePassengers}
+                onPress={() => setExpandedId(expanded ? null : trip.id)}
+              >
+                <Text style={styles.toggleText}>{expanded ? "Hide" : "View"} passengers</Text>
+              </TouchableOpacity>
+
+              {expanded ? (
+                <View style={styles.passengerList}>
+                  {trip.passengers.map((p, idx) => (
+                    <View key={`${p.name}-${idx}`} style={styles.passengerRow}>
+                      <Text style={styles.passengerName}>{p.name}</Text>
+                      <Text style={styles.passengerDest}>{p.destination}</Text>
+                    </View>
+                  ))}
+                </View>
+              ) : null}
             </View>
-          </View>
-        ))}
+          );
+        })}
 
         {filteredHistory.length === 0 ? (
           <Text style={styles.statusText}>No trips match your filters.</Text>
@@ -138,7 +203,7 @@ export default function DriverHistoryScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: "#f5f6fb",
   },
   scrollContent: {
     paddingHorizontal: 16,
@@ -150,72 +215,152 @@ const styles = StyleSheet.create({
     marginHorizontal: -16,
   },
   welcomeWrap: {
-    gap: 2,
+    gap: 4,
   },
   welcomeText: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#000",
+    fontSize: 16,
+    fontWeight: "800",
+    color: "#0a0a0a",
   },
   dateText: {
     fontSize: 12,
     fontWeight: "700",
-    color: "#000",
+    color: "#1f2c60",
+  },
+  kpiRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  kpiCard: {
+    flex: 1,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "#e0e6ff",
+  },
+  kpiLabel: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: "#6b7280",
+  },
+  kpiValue: {
+    fontSize: 18,
+    fontWeight: "900",
+    color: "#0f1e6b",
   },
   filterCard: {
     backgroundColor: "#fff",
     padding: 12,
-    borderRadius: 10,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#e0e0e0",
+    borderColor: "#e0e6ff",
     gap: 8,
-  },
-  filterLabel: {
-    fontSize: 12,
-    fontWeight: "800",
-    color: "#000",
-  },
-  filterInput: {
-    height: 40,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#c4c4c4",
-    paddingHorizontal: 10,
-    backgroundColor: "#f9f9f9",
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  tripCard: {
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    padding: 16,
-    gap: 6,
-    borderWidth: 1,
-    borderColor: "#c4c4c4",
     shadowColor: "#000",
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.04,
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },
   },
+  filterHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  filterLabel: {
+    fontSize: 12,
+    fontWeight: "900",
+    color: "#000",
+  },
+  clearText: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: "#0f1e6b",
+  },
+  filterInput: {
+    height: 44,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#c4c4c4",
+    paddingHorizontal: 12,
+    backgroundColor: "#f9f9f9",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  tripCard: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 16,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: "#e3e7ff",
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+  },
+  tripHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  badge: {
+    backgroundColor: "#0f7d2a",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  badgeText: {
+    color: "#fff",
+    fontWeight: "900",
+    fontSize: 11,
+  },
   tripTitle: {
     fontSize: 14,
-    fontWeight: "800",
+    fontWeight: "900",
     color: "#0f7d2a",
   },
   detailText: {
     fontSize: 12,
     fontWeight: "700",
-    color: "#000",
+    color: "#0a0a0a",
   },
-  sectionLabel: {
-    marginTop: 8,
+  tripMetaRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: 4,
+  },
+  metaLabel: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: "#6b7280",
+  },
+  metaValue: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: "#0a0a0a",
+  },
+  togglePassengers: {
+    marginTop: 6,
+    paddingVertical: 10,
+    alignItems: "center",
+    borderRadius: 10,
+    backgroundColor: "#eef1ff",
+    borderWidth: 1,
+    borderColor: "#cdd4ff",
+  },
+  toggleText: {
+    fontSize: 12,
+    fontWeight: "900",
+    color: "#0f1e6b",
   },
   passengerList: {
-    backgroundColor: "#f5f5f5",
-    borderRadius: 8,
+    backgroundColor: "#f8f9ff",
+    borderRadius: 10,
     padding: 10,
     gap: 6,
-    marginTop: 4,
+    marginTop: 6,
+    borderWidth: 1,
+    borderColor: "#e4e7ff",
   },
   passengerRow: {
     flexDirection: "row",
@@ -233,10 +378,9 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 12,
-    fontWeight: "600",
+    fontWeight: "700",
     color: "#444",
     textAlign: "center",
     marginTop: 12,
   },
 });
-

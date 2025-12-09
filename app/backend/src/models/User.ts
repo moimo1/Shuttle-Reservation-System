@@ -10,6 +10,7 @@ const userSchema = new mongoose.Schema({
     default: "passenger",
     required: true,
   },
+  avatarUrl: { type: String },
 });
 
 export default mongoose.model("User", userSchema);

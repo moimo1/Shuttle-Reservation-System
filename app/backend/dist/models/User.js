@@ -3,6 +3,13 @@ const userSchema = new mongoose.Schema({
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
+    role: {
+        type: String,
+        enum: ["driver", "passenger"],
+        default: "passenger",
+        required: true,
+    },
+    avatarUrl: { type: String },
 });
 export default mongoose.model("User", userSchema);
 //# sourceMappingURL=User.js.map
