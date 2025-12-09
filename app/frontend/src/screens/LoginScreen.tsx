@@ -1,16 +1,7 @@
 import React, { useState } from "react";
-import {  View, Text, TextInput, 
-  TouchableOpacity, StyleSheet } from "react-native";
-import { useNavigation, NavigationProp } from '@react-navigation/native'; // Import useNavigation
-import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet } from "react-native";
+import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { login } from "../services/authService";
-
-import ScheduleScreen from "./ScheduleScreen";
-import MapScreen from "./MapScreen";
-import ProfileScreen from "./ProfileScreen";
-import DriverReservationsScreen from "./DriverReservationsScreen";
-import DriverHistoryScreen from "./DriverHistoryScreen";
-import PassengerProfileScreen from "./PassengerProfileScreen";
 
 type RootStackParamList = {
   Login: undefined;
@@ -18,29 +9,6 @@ type RootStackParamList = {
   PassengerTabs: undefined;
   DriverTabs: undefined;
 };
-
-const Tab = createBottomTabNavigator();
-
-function PassengerTabs() {
-  return (
-    <Tab.Navigator screenOptions={{ headerShown: false }}>
-      <Tab.Screen name="Schedule" component={ScheduleScreen} />
-      <Tab.Screen name="Map" component={MapScreen} />
-      <Tab.Screen name="Profile" component={PassengerProfileScreen} />
-    </Tab.Navigator>
-  );
-}
-
-function DriverTabs() {
-  return (
-    <Tab.Navigator screenOptions={{ headerShown: false }}>
-      <Tab.Screen name="Driver" component={DriverReservationsScreen} />
-      <Tab.Screen name="Map" component={MapScreen} />
-      <Tab.Screen name="History" component={DriverHistoryScreen} />
-      <Tab.Screen name="Profile" component={ProfileScreen} />
-    </Tab.Navigator>
-  );
-}
 
 export default function LoginScreen() {
   const [email, setEmail] = useState("");

@@ -509,13 +509,13 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   welcomeText: {
-    fontSize: 16,
-    fontWeight: "800",
+    fontSize: 15,
+    fontWeight: "700",
     color: "#111827",
   },
   dateText: {
-    fontSize: 13,
-    fontWeight: "700",
+    fontSize: 12,
+    fontWeight: "600",
     color: "#4b5563",
   },
   actionsRow: {
@@ -572,8 +572,8 @@ const styles = StyleSheet.create({
     color: "#374151",
   },
   statusText: {
-    fontSize: 13,
-    fontWeight: "700",
+    fontSize: 12,
+    fontWeight: "600",
     color: "#4b5563",
     textAlign: "center",
     marginTop: 8,
@@ -582,13 +582,12 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   sectionTitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "800",
     color: "#1f2937",
     marginTop: 4,
     marginBottom: 4,
     textTransform: "uppercase",
-    letterSpacing: 0.5,
   },
   cardList: {
     gap: 10,

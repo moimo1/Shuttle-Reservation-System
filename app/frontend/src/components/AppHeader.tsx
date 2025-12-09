@@ -1,16 +1,64 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
+import { getUnreadCount } from "../services/notificationService";
+import { getAuthToken } from "../services/authService";
 
 type Props = {
   onNotifPress?: () => void;
   unreadCount?: number;
   subtitle?: string;
+  autoFetchUnread?: boolean;
 };
 
-export default function AppHeader({ onNotifPress, unreadCount = 3, subtitle }: Props) {
+export default function AppHeader({ onNotifPress, unreadCount: propUnreadCount, subtitle, autoFetchUnread = true }: Props) {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation();
+  const [unreadCount, setUnreadCount] = useState(propUnreadCount ?? 0);
+
+  const fetchUnread = React.useCallback(async () => {
+    if (!autoFetchUnread) {
+      setUnreadCount(propUnreadCount ?? 0);
+      return;
+    }
+    try {
+      const token = getAuthToken();
+      if (token) {
+        const count = await getUnreadCount(token);
+        setUnreadCount(count);
+      }
+    } catch (err) {
+      // Silently fail - use prop value or 0
+      setUnreadCount(propUnreadCount ?? 0);
+    }
+  }, [autoFetchUnread, propUnreadCount]);
+
+  useEffect(() => {
+    fetchUnread();
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchUnread, 30000);
+    return () => clearInterval(interval);
+  }, [fetchUnread]);
+
+  // Refresh when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      if (autoFetchUnread) {
+        fetchUnread();
+      }
+    }, [fetchUnread, autoFetchUnread])
+  );
+
+  const handleNotificationPress = () => {
+    if (onNotifPress) {
+      onNotifPress();
+    } else {
+      // Default: navigate to notifications screen
+      (navigation as any).navigate("Notifications");
+    }
+  };
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + 10 }]}>
@@ -33,14 +81,16 @@ export default function AppHeader({ onNotifPress, unreadCount = 3, subtitle }: P
         </View>
 
         <TouchableOpacity
-          onPress={onNotifPress}
+          onPress={handleNotificationPress}
           activeOpacity={0.85}
           style={styles.iconButton}
         >
           <Ionicons name="notifications-outline" size={22} color="#0f2553" />
           {unreadCount > 0 ? (
             <View style={styles.badge}>
-              <Text style={styles.badgeText}>{unreadCount}</Text>
+              <Text style={styles.badgeText}>
+                {unreadCount > 99 ? "99+" : unreadCount}
+              </Text>
             </View>
           ) : null}
         </TouchableOpacity>

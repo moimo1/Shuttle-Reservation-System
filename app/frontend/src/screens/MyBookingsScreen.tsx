@@ -12,27 +12,48 @@ import {
   Image,
 } from "react-native";
 import AppHeader from "../components/AppHeader";
-import { getAuthToken } from "../services/authService";
+import { getAuthToken, getCurrentUser } from "../services/authService";
 import {
   fetchMyReservations,
   cancelReservation,
   Reservation,
 } from "../services/reservationService";
 
-const formatDateTime = (value?: string) => {
-  if (!value) return "TBD";
+const formatDateTime = (value?: string | null) => {
+  if (!value || (typeof value === "string" && value.trim() === "")) {
+    return "TBD";
+  }
+  
   try {
+    // First, try to parse as a full date-time string
     const date = new Date(value);
-    const time = date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-    const day = date.toLocaleDateString([], {
-      month: "long",
-      day: "numeric",
-      year: "numeric",
-      weekday: "long",
-    });
-    return `${time} — ${day}`;
-  } catch {
-    return value;
+    
+    // Check if date is valid by checking if getTime() returns a valid number
+    if (!isNaN(date.getTime()) && date.toString() !== "Invalid Date") {
+      // It's a valid date, format it
+      const time = date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+      const day = date.toLocaleDateString([], {
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+        weekday: "long",
+      });
+      return `${time} — ${day}`;
+    }
+    
+    // If not a valid date, it might be just a time string (e.g., "08:00 AM" or "8:00")
+    // Return it as-is
+    if (typeof value === "string") {
+      return value;
+    }
+    
+    return "TBD";
+  } catch (error) {
+    // If parsing fails, return the value as-is if it's a string, otherwise "TBD"
+    if (typeof value === "string") {
+      return value;
+    }
+    return "TBD";
   }
 };
 
@@ -99,7 +120,12 @@ export default function MyBookingsScreen() {
     () =>
       reservations.map((r, idx) => {
         const shuttle = r.shuttle || {};
-        const timeValue = (shuttle as any).departureTime || (shuttle as any).time;
+        // Try multiple possible fields for departure time
+        const timeValue = 
+          (shuttle as any).departureTime || 
+          (shuttle as any).time || 
+          (shuttle as any).departureDate ||
+          null;
         return {
           id: r._id || String(idx),
           title: `Booking #${idx + 1}`,
@@ -131,6 +157,11 @@ export default function MyBookingsScreen() {
     });
   }, []);
 
+  const user = useMemo(() => getCurrentUser(), []);
+  const displayName = useMemo(() => {
+    return user?.name?.toUpperCase() || "USER";
+  }, [user]);
+
   const onRefresh = () => {
     setRefreshing(true);
     loadReservations();
@@ -148,7 +179,7 @@ export default function MyBookingsScreen() {
         </View>
 
         <View style={styles.welcomeWrap}>
-          <Text style={styles.welcomeText}>WELCOME @USER!</Text>
+          <Text style={styles.welcomeText}>WELCOME {displayName}!</Text>
           <Text style={styles.dateText}>{todayLabel}</Text>
         </View>
 
@@ -186,6 +217,23 @@ export default function MyBookingsScreen() {
                   </Text>
                   {!!booking.seatNumber && (
                     <Text style={styles.detailText}>Seat: {booking.seatNumber}</Text>
+                  )}
+                  {booking.isRecurring && (
+                    <>
+                      <Text style={styles.recurringBadge}>
+                        🔄 Recurring ({booking.recurrenceType === "daily" ? "Daily" : "Weekly"})
+                      </Text>
+                      {booking.scheduledDate && (
+                        <Text style={styles.detailText}>
+                          Date: {new Date(booking.scheduledDate).toLocaleDateString()}
+                        </Text>
+                      )}
+                      {booking.recurrenceEndDate && (
+                        <Text style={styles.detailText}>
+                          Until: {new Date(booking.recurrenceEndDate).toLocaleDateString()}
+                        </Text>
+                      )}
+                    </>
                   )}
                 </View>
               </View>

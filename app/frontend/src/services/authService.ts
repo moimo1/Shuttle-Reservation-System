@@ -91,3 +91,28 @@ export const login = async (email: string, password: string) => {
   }
 };
 
+export const logout = () => {
+  setAuthToken(null);
+  setCurrentUser(null);
+};
+
+export const uploadAvatarImage = async (base64Image: string, token?: string | null) => {
+  const auth = token || authToken;
+  const response = await fetch(`${API_BASE_URL}/auth/avatar/upload`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(auth ? { Authorization: `Bearer ${auth}` } : {}),
+    },
+    body: JSON.stringify({ imageBase64: base64Image }),
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data?.message || "Failed to upload avatar");
+  }
+
+  if (data?.user) setCurrentUser(data.user);
+  return data;
+};
+

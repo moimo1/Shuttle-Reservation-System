@@ -15,7 +15,8 @@ import {
 } from "react-native";
 import AppHeader from "../components/AppHeader";
 import { fetchShuttles, reserveSeat } from "../services/shuttleService";
-import { getAuthToken } from "../services/authService";
+import { getAuthToken, getCurrentUser } from "../services/authService";
+import { fetchMyReservations } from "../services/reservationService";
 
 export default function ViewScheduleScreen() {
   const [shuttles, setShuttles] = useState([]);
@@ -38,6 +39,11 @@ export default function ViewScheduleScreen() {
       year: "numeric",
     });
   }, []);
+
+  const user = useMemo(() => getCurrentUser(), []);
+  const displayName = useMemo(() => {
+    return user?.name?.toUpperCase() || "USER";
+  }, [user]);
 
   useEffect(() => {
     const load = async () => {
@@ -121,13 +127,42 @@ export default function ViewScheduleScreen() {
     }
   };
 
-  const handleReservePress = () => {
+  const handleReservePress = async () => {
     if (!selectedTrip) return;
     if (!selectedSeat) {
       setReserveMessage("Please select a seat.");
       return;
     }
     setReserveMessage("");
+
+    // Check for time conflicts before showing confirmation
+    try {
+      const token = getAuthToken();
+      if (token) {
+        const myReservations = await fetchMyReservations(token);
+        const activeReservations = myReservations.filter((r) => r.status === "active");
+        
+        const conflictingReservation = activeReservations.find((reservation) => {
+          const shuttle = reservation.shuttle;
+          if (!shuttle || !shuttle.departureTime) return false;
+          return shuttle.departureTime === selectedTrip.time;
+        });
+
+        if (conflictingReservation) {
+          const conflictingShuttle = conflictingReservation.shuttle;
+          Alert.alert(
+            "Time Conflict",
+            `You already have a reservation at ${selectedTrip.time} for ${conflictingShuttle?.name || "another shuttle"}. Please cancel it first or choose a different time.`,
+            [{ text: "OK" }]
+          );
+          return;
+        }
+      }
+    } catch (err) {
+      // If we can't check reservations, continue with booking (backend will validate)
+      console.log("Could not check for conflicts:", err);
+    }
+
     setConfirmVisible(true);
   };
 
@@ -195,7 +230,7 @@ export default function ViewScheduleScreen() {
         </View>
 
         <View style={styles.welcomeWrap}>
-          <Text style={styles.welcomeText}>WELCOME @USER!</Text>
+          <Text style={styles.welcomeText}>WELCOME {displayName}!</Text>
           <Text style={styles.dateText}>{todayLabel}</Text>
         </View>
 

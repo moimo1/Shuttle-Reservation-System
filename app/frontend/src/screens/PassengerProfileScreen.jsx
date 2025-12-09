@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import {
   SafeAreaView,
   ScrollView,
@@ -8,20 +8,96 @@ import {
   TouchableOpacity,
   View,
   Alert,
+  Image,
+  ActivityIndicator,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 import AppHeader from "../components/AppHeader";
-import { getCurrentUser, logout, getAuthToken } from "../services/authService";
+import { getCurrentUser, logout, uploadAvatarImage, getAuthToken } from "../services/authService";
 
 export default function PassengerProfileScreen() {
   const navigation = useNavigation();
+  const [user, setUser] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [previewUri, setPreviewUri] = useState(null);
+  const [imageBase64, setImageBase64] = useState("");
 
-  const user = useMemo(() => getCurrentUser(), []);
+  const refreshUserData = () => {
+    const current = getCurrentUser();
+    if (current) {
+      setUser(current);
+      setPreviewUri(current?.avatarUrl || null);
+    }
+  };
+
+  useEffect(() => {
+    refreshUserData();
+  }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      refreshUserData();
+    }, [])
+  );
 
   const displayName = useMemo(() => {
     return user?.name?.toUpperCase() || "USER";
   }, [user]);
+
+  const handlePickImage = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (permission.status !== "granted") {
+      Alert.alert("Permission needed", "We need access to your photos to upload an avatar.");
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.6,
+      base64: true,
+    });
+
+    if (result.canceled || !result.assets?.length) return;
+
+    const asset = result.assets[0];
+
+    const estimatedBytes = asset.base64 ? asset.base64.length * (3 / 4) : 0;
+    const maxBytes = 4 * 1024 * 1024; // 4MB
+    if (estimatedBytes > maxBytes) {
+      Alert.alert("Image too large", "Please choose a smaller image (under ~4MB).");
+      return;
+    }
+
+    const base64String = asset.base64 ? `data:image/jpeg;base64,${asset.base64}` : "";
+    setPreviewUri(asset.uri || null);
+    setImageBase64(base64String);
+  };
+
+  const handleUploadImage = async () => {
+    if (!imageBase64) {
+      Alert.alert("Upload", "Pick an image first.");
+      return;
+    }
+
+    try {
+      setUploading(true);
+      const token = getAuthToken();
+      const result = await uploadAvatarImage(imageBase64, token);
+      if (result?.user) {
+        refreshUserData();
+        setImageBase64("");
+        Alert.alert("Success", "Profile picture updated successfully!");
+      }
+    } catch (err) {
+      Alert.alert("Upload failed", err?.message || "Unable to upload avatar.");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleLogout = () => {
     Alert.alert(
@@ -58,9 +134,15 @@ export default function PassengerProfileScreen() {
 
         <View style={styles.profileCard}>
           <View style={styles.profileHeader}>
-            <View style={styles.avatarCircle}>
-              <Ionicons name="person" size={40} color="#1142a4" />
-            </View>
+            <TouchableOpacity onPress={handlePickImage} activeOpacity={0.85}>
+              <View style={styles.avatarCircle}>
+                {previewUri ? (
+                  <Image source={{ uri: previewUri }} style={styles.avatarImage} />
+                ) : (
+                  <Ionicons name="person" size={40} color="#1142a4" />
+                )}
+              </View>
+            </TouchableOpacity>
             <View style={styles.profileInfo}>
               <Text style={styles.profileName}>{user?.name || "User"}</Text>
               <Text style={styles.profileEmail}>{user?.email || "No email"}</Text>
@@ -93,6 +175,29 @@ export default function PassengerProfileScreen() {
                 <Text style={styles.infoLabel}>Account Type</Text>
               </View>
               <Text style={styles.infoValue}>Passenger</Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.sectionBlock}>
+          <Text style={styles.sectionTitle}>Profile Picture</Text>
+          <View style={styles.infoCard}>
+            <Text style={styles.helperText}>Upload from your device</Text>
+            <View style={styles.uploadRow}>
+              <TouchableOpacity style={styles.secondaryButton} onPress={handlePickImage}>
+                <Text style={styles.secondaryText}>Choose from device</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.primaryButton, uploading && styles.primaryDisabled]}
+                onPress={handleUploadImage}
+                disabled={uploading}
+              >
+                {uploading ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.primaryText}>Upload</Text>
+                )}
+              </TouchableOpacity>
             </View>
           </View>
         </View>
@@ -157,6 +262,12 @@ const styles = StyleSheet.create({
     borderColor: "#cdd4ff",
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
+  },
+  avatarImage: {
+    height: 80,
+    width: 80,
+    borderRadius: 40,
   },
   profileInfo: {
     flex: 1,
@@ -219,6 +330,49 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: "#e5e7eb",
     marginVertical: 4,
+  },
+  helperText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#6b7280",
+    marginBottom: 12,
+  },
+  uploadRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  primaryButton: {
+    flex: 1,
+    height: 44,
+    borderRadius: 10,
+    backgroundColor: "#1142a4",
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 6,
+  },
+  primaryDisabled: {
+    opacity: 0.6,
+  },
+  primaryText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  secondaryButton: {
+    flex: 1,
+    height: 44,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#d1d5db",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#fff",
+  },
+  secondaryText: {
+    color: "#374151",
+    fontSize: 13,
+    fontWeight: "700",
   },
   logoutButton: {
     flexDirection: "row",

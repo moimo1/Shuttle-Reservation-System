@@ -1,5 +1,6 @@
 import Shuttle from "../models/Shuttle.js";
 import Reservation from "../models/Reservation.js";
+import Notification from "../models/Notification.js";
 
 const TOTAL_SEATS = 20;
 
@@ -79,6 +80,26 @@ export const reserveShuttle = async (req: any, res: any) => {
         .status(400)
         .json({ message: "You already reserved a seat for this shuttle" });
 
+    // Check if user has an active reservation at the same departure time in a different shuttle
+    const userActiveReservations = await Reservation.find({
+      user: req.user.id,
+      status: "active",
+    }).populate("shuttle", "departureTime name");
+
+    const conflictingReservation = userActiveReservations.find((res: any) => {
+      const existingShuttle = res.shuttle;
+      if (!existingShuttle || !existingShuttle.departureTime) return false;
+      // Compare departure times - they should match exactly
+      return existingShuttle.departureTime === shuttle.departureTime;
+    });
+
+    if (conflictingReservation) {
+      const conflictingShuttle = (conflictingReservation as any).shuttle;
+      return res.status(400).json({ 
+        message: `You already have a reservation at ${shuttle.departureTime} for ${conflictingShuttle?.name || "another shuttle"}. Please cancel it first or choose a different time.` 
+      });
+    }
+
     const reservedCount = await Reservation.countDocuments({
       shuttle: shuttle._id,
       status: "active",
@@ -94,6 +115,25 @@ export const reserveShuttle = async (req: any, res: any) => {
     });
 
     console.log(`Reservation created: seat ${reservation.seatNumber} for shuttle ${shuttle._id}`);
+
+    // Create confirmation notification
+    try {
+      const confirmationNotification = new Notification({
+        user: req.user.id,
+        reservation: reservation._id,
+        shuttle: shuttle._id,
+        type: "confirmation",
+        title: "Reservation Confirmed",
+        message: `Your seat ${parsedSeatNumber} has been reserved for ${shuttle.name} departing at ${shuttle.departureTime}`,
+        scheduledFor: new Date(),
+        isSent: true,
+        sentAt: new Date(),
+      });
+      await confirmationNotification.save();
+    } catch (notifError) {
+      console.error("Error creating confirmation notification:", notifError);
+      // Don't fail the reservation if notification creation fails
+    }
 
     // Don't update shuttle.seatsAvailable - it's calculated from reservations
     // Calculate current availability for response

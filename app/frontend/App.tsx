@@ -12,12 +12,11 @@ import RegisterScreen from "./src/screens/RegisterScreen";
 import ScheduleScreen from "./src/screens/ScheduleScreen";
 import MapScreen from "./src/screens/MapScreen";
 import ProfileScreen from "./src/screens/ProfileScreen";
-<<<<<<< HEAD
+import PassengerProfileScreen from "./src/screens/PassengerProfileScreen";
 import DriverReservationsScreen from "./src/screens/DriverReservationsScreen";
 import DriverHistoryScreen from "./src/screens/DriverHistoryScreen";
-=======
 import MyBookingsScreen from "./src/screens/MyBookingsScreen";
->>>>>>> 1cf79b9467c8d9e2f179e874dacc668d47e71356
+import NotificationsScreen from "./src/screens/NotificationsScreen";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -25,6 +24,7 @@ const Tab = createBottomTabNavigator();
 const tabIcons: Record<string, keyof typeof Ionicons.glyphMap> = {
   Schedule: "calendar-outline",
   Map: "location-outline",
+  Bookings: "ticket-outline",
   Profile: "person-circle-outline",
   Driver: "speedometer-outline", // steering-wheel-like
   History: "time-outline",
@@ -64,7 +64,8 @@ function PassengerTabs() {
     >
       <Tab.Screen name="Schedule" component={ScheduleScreen} />
       <Tab.Screen name="Map" component={MapScreen} />
-      <Tab.Screen name="Profile" component={ProfileScreen} />
+      <Tab.Screen name="Bookings" component={MyBookingsScreen} />
+      <Tab.Screen name="Profile" component={PassengerProfileScreen} />
     </Tab.Navigator>
   );
 }
@@ -98,15 +99,9 @@ export default function App() {
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Register" component={RegisterScreen} />
-<<<<<<< HEAD
         <Stack.Screen name="PassengerTabs" component={PassengerTabs} />
         <Stack.Screen name="DriverTabs" component={DriverTabs} />
-=======
-
-        {/* Bottom navbar after login */}
-        <Stack.Screen name="MainTabs" component={MainTabs} />
-        <Stack.Screen name="MyBookings" component={MyBookingsScreen} />
->>>>>>> 1cf79b9467c8d9e2f179e874dacc668d47e71356
+        <Stack.Screen name="Notifications" component={NotificationsScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
