@@ -443,7 +443,14 @@ export default function DriverReservationsScreen() {
 
             {selectedTrip && activeModal === "passengers" ? (
               <>
-                <View style={styles.passengerGrid}>{renderPassengerGrid(selectedTrip)}</View>
+                <ScrollView 
+                  style={styles.passengerScrollContainer}
+                  contentContainerStyle={styles.passengerGrid}
+                  showsVerticalScrollIndicator={true}
+                  nestedScrollEnabled={true}
+                >
+                  {renderPassengerGrid(selectedTrip)}
+                </ScrollView>
                 <TouchableOpacity style={styles.primaryButton} onPress={handleStartTrip}>
                   <Text style={styles.primaryButtonText}>Start Trip</Text>
                 </TouchableOpacity>
@@ -502,13 +509,13 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   welcomeText: {
-    fontSize: 15,
-    fontWeight: "700",
+    fontSize: 16,
+    fontWeight: "800",
     color: "#111827",
   },
   dateText: {
-    fontSize: 12,
-    fontWeight: "600",
+    fontSize: 13,
+    fontWeight: "700",
     color: "#4b5563",
   },
   actionsRow: {
@@ -529,8 +536,8 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     color: "#fff",
-    fontSize: 13,
-    fontWeight: "700",
+    fontSize: 14,
+    fontWeight: "800",
   },
   secondaryButton: {
     flex: 1,
@@ -545,7 +552,7 @@ const styles = StyleSheet.create({
   },
   secondaryText: {
     color: "#0f1e6b",
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "700",
     textAlign: "center",
   },
@@ -560,13 +567,13 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
   secondaryGhostText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "700",
     color: "#374151",
   },
   statusText: {
-    fontSize: 12,
-    fontWeight: "600",
+    fontSize: 13,
+    fontWeight: "700",
     color: "#4b5563",
     textAlign: "center",
     marginTop: 8,
@@ -575,12 +582,13 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   sectionTitle: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: "800",
     color: "#1f2937",
     marginTop: 4,
     marginBottom: 4,
     textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
   cardList: {
     gap: 10,
@@ -619,9 +627,9 @@ const styles = StyleSheet.create({
   },
   statusPillText: {
     color: "#fff",
-    fontWeight: "900",
-    fontSize: 11,
-    letterSpacing: 0.2,
+    fontWeight: "800",
+    fontSize: 12,
+    letterSpacing: 0.3,
   },
   timePill: {
     paddingHorizontal: 10,
@@ -632,22 +640,22 @@ const styles = StyleSheet.create({
     borderColor: "#cdd4ff",
   },
   tripTitle: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "800",
     color: "#111827",
   },
   timeText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#111827",
-  },
-  detailText: {
     fontSize: 13,
     fontWeight: "700",
     color: "#111827",
   },
+  detailText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#111827",
+  },
   subtleText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "600",
     color: "#6b7280",
   },
@@ -660,12 +668,12 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   metaLabel: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "700",
     color: "#6b7280",
   },
   metaValue: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "700",
     color: "#111827",
   },
@@ -679,7 +687,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   linkText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "800",
     color: "#1d4ed8",
   },
@@ -720,9 +728,10 @@ const styles = StyleSheet.create({
     marginTop: 14,
   },
   modalTitle: {
-    fontSize: 15,
-    fontWeight: "900",
+    fontSize: 16,
+    fontWeight: "800",
     color: "#0a0a0a",
+    letterSpacing: 0.2,
   },
   closeButton: {
     height: 32,
@@ -735,16 +744,20 @@ const styles = StyleSheet.create({
     backgroundColor: "#f5f5f5",
   },
   closeText: {
-    fontSize: 22,
-    fontWeight: "900",
+    fontSize: 24,
+    fontWeight: "800",
     color: "#000",
     marginTop: -2,
+  },
+  passengerScrollContainer: {
+    maxHeight: 400,
+    marginTop: 8,
   },
   passengerGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 12,
-    marginTop: 8,
+    paddingBottom: 8,
   },
   seatCard: {
     width: "48%",
@@ -760,22 +773,22 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
   },
   seatLabel: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "800",
     color: "#0f1e6b",
   },
   passengerName: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "700",
     color: "#111827",
   },
   passengerDest: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "600",
     color: "#4b5563",
   },
   availableText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "800",
     color: "#0f7d2a",
   },
@@ -792,7 +805,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   presenceText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "800",
   },
   pillNeutral: {
@@ -833,13 +846,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   filterLabel: {
-    fontSize: 12,
-    fontWeight: "900",
+    fontSize: 14,
+    fontWeight: "800",
     color: "#000",
   },
   nearestText: {
-    fontSize: 11,
-    fontWeight: "800",
+    fontSize: 12,
+    fontWeight: "700",
     color: "#0f7d2a",
   },
   filterInput: {
@@ -849,7 +862,7 @@ const styles = StyleSheet.create({
     borderColor: "#c4c4c4",
     paddingHorizontal: 12,
     backgroundColor: "#f9f9f9",
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "700",
   },
   notificationCard: {
@@ -861,12 +874,12 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   notifTitle: {
-    fontSize: 13,
-    fontWeight: "900",
+    fontSize: 14,
+    fontWeight: "800",
     color: "#b45309",
   },
   notifText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "700",
     color: "#7a5008",
   },
@@ -878,7 +891,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   outlineText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "800",
     color: "#b45309",
   },
