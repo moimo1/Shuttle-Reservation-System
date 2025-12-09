@@ -28,56 +28,6 @@ type DriverTrip = {
   dateLabel?: string;
 };
 
-const MOCK_TRIPS: DriverTrip[] = [
-  {
-    key: "ongoing-0730",
-    status: "ongoing",
-    time: "7:30 AM",
-    route: "SLU Main Campus → Bakakeng",
-    passengers: [
-      {
-        name: "Anne Villamor",
-        email: "anne@example.com",
-        destination: "Bakakeng",
-        seatNumber: 10,
-        departureTime: "7:30 AM",
-        shuttleName: "SLU Main Campus → Bakakeng",
-      },
-      {
-        name: "John Cruz",
-        email: "john@example.com",
-        destination: "Bakakeng",
-        seatNumber: 11,
-        departureTime: "7:30 AM",
-        shuttleName: "SLU Main Campus → Bakakeng",
-      },
-    ],
-    capacity: 20,
-    remainingStops: 3,
-    eta: "12 mins to arrival",
-    dateLabel: "Today",
-  },
-  {
-    key: "upcoming-1015",
-    status: "upcoming",
-    time: "10:15 AM",
-    route: "Bakakeng → SLU Main Campus",
-    passengers: [],
-    capacity: 20,
-    eta: "2 hrs 45 mins",
-    dateLabel: "Today",
-  },
-  {
-    key: "completed-0545",
-    status: "completed",
-    time: "5:45 AM",
-    route: "SLU Main Campus → Bakakeng",
-    passengers: [],
-    capacity: 20,
-    dateLabel: "Today",
-  },
-];
-
 export default function DriverReservationsScreen() {
   const [reservations, setReservations] = useState<DriverReservation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -104,6 +54,30 @@ export default function DriverReservationsScreen() {
     });
   }, []);
 
+  const parseDepartureToDate = (time: string | undefined) => {
+    if (!time) return null;
+    const match = time.trim().match(/^(\d{1,2}):?(\d{2})?\s*(AM|PM)$/i);
+    if (!match) return null;
+    const [, hourRaw, minuteRaw, meridiem] = match;
+    let hour = Number(hourRaw);
+    const minutes = Number(minuteRaw ?? "0");
+    if (Number.isNaN(hour) || Number.isNaN(minutes)) return null;
+    if (meridiem?.toUpperCase() === "PM" && hour !== 12) hour += 12;
+    if (meridiem?.toUpperCase() === "AM" && hour === 12) hour = 0;
+    const date = new Date();
+    date.setHours(hour, minutes, 0, 0);
+    return date;
+  };
+
+  const determineTripStatus = (time: string | undefined): DriverTrip["status"] => {
+    const departure = parseDepartureToDate(time);
+    if (!departure) return "ongoing";
+    const diffMins = (departure.getTime() - Date.now()) / (1000 * 60);
+    if (diffMins > 30) return "upcoming";
+    if (diffMins < -30) return "completed";
+    return "ongoing";
+  };
+
   const normalizedTrips = useMemo<DriverTrip[]>(() => {
     const grouped: Record<string, DriverTrip> = {};
 
@@ -117,7 +91,7 @@ export default function DriverReservationsScreen() {
       if (!grouped[key]) {
         grouped[key] = {
           key,
-          status: "ongoing",
+          status: determineTripStatus(res.departureTime),
           time: res.departureTime || "TBD",
           route: res.shuttleName || "Route",
           passengers: [],
@@ -130,9 +104,7 @@ export default function DriverReservationsScreen() {
       grouped[key].passengers.push(res);
     });
 
-    const mergedTrips = [...Object.values(grouped), ...MOCK_TRIPS];
-
-    return mergedTrips
+    return Object.values(grouped)
       .map((trip) => ({
         ...trip,
         passengers: [...trip.passengers].sort((a, b) =>
@@ -160,6 +132,9 @@ export default function DriverReservationsScreen() {
     setError("");
     try {
       const token = getAuthToken();
+      if (!token) {
+        throw new Error("You must be logged in as a driver to view reservations.");
+      }
       const data = await fetchDriverReservations(token);
       setReservations(data);
     } catch (err: any) {
@@ -387,7 +362,8 @@ export default function DriverReservationsScreen() {
           </Text>
           <TouchableOpacity
             style={styles.outlineButton}
-            onPress={() => handleOpenModal("notification", normalizedTrips[0] || MOCK_TRIPS[0])}
+            onPress={() => normalizedTrips[0] && handleOpenModal("notification", normalizedTrips[0])}
+            disabled={!normalizedTrips.length}
           >
             <Text style={styles.outlineText}>View latest notification</Text>
           </TouchableOpacity>
