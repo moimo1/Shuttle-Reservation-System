@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   SafeAreaView,
   ScrollView,
@@ -10,48 +10,13 @@ import {
   View,
 } from "react-native";
 import AppHeader from "../components/AppHeader";
-import { getCurrentUser } from "../services/authService";
-
-type Passenger = {
-  name: string;
-  destination: string;
-};
-
-type TripHistory = {
-  id: string;
-  date: string;
-  time: string;
-  route: string;
-  passengerCount: number;
-  passengers: Passenger[];
-};
-
-const MOCK_HISTORY: TripHistory[] = [
-  {
-    id: "1",
-    date: "2025-01-10",
-    time: "07:30 AM",
-    route: "SLU Main Campus → Bakakeng",
-    passengerCount: 18,
-    passengers: [
-      { name: "Anne Villamor", destination: "Bakakeng" },
-      { name: "John Cruz", destination: "SLU Main Campus" },
-    ],
-  },
-  {
-    id: "2",
-    date: "2025-01-09",
-    time: "05:45 AM",
-    route: "Bakakeng → SLU Main Campus",
-    passengerCount: 14,
-    passengers: [
-      { name: "Maria Santos", destination: "SLU Main Campus" },
-      { name: "Leo Ramos", destination: "SLU Main Campus" },
-    ],
-  },
-];
+import { getCurrentUser, getAuthToken } from "../services/authService";
+import { fetchDriverHistory, TripHistory } from "../services/driverService";
 
 export default function DriverHistoryScreen() {
+  const [history, setHistory] = useState<TripHistory[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [dateFilter, setDateFilter] = useState("");
   const [destinationFilter, setDestinationFilter] = useState("");
   const [minPassengers, setMinPassengers] = useState("");
@@ -62,19 +27,32 @@ export default function DriverHistoryScreen() {
     return name.toUpperCase();
   }, []);
 
-  const filteredHistory = useMemo(() => {
-    return MOCK_HISTORY.filter((trip) => {
-      const matchDate = dateFilter ? trip.date.includes(dateFilter) : true;
-      const matchDestination = destinationFilter
-        ? trip.passengers.some((p) =>
-            p.destination.toLowerCase().includes(destinationFilter.toLowerCase())
-          )
-        : true;
-      const matchCount =
-        minPassengers.trim() === "" ? true : trip.passengerCount >= Number(minPassengers);
-      return matchDate && matchDestination && matchCount;
-    });
+  const loadHistory = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const token = getAuthToken();
+      const filters: { date?: string; destination?: string; minPassengers?: string } = {};
+      if (dateFilter.trim()) filters.date = dateFilter.trim();
+      if (destinationFilter.trim()) filters.destination = destinationFilter.trim();
+      if (minPassengers.trim()) filters.minPassengers = minPassengers.trim();
+      
+      const data = await fetchDriverHistory(token, filters);
+      setHistory(data);
+    } catch (err: any) {
+      setError(err?.message || "Failed to load history");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadHistory();
   }, [dateFilter, destinationFilter, minPassengers]);
+
+  const filteredHistory = useMemo(() => {
+    return history;
+  }, [history]);
 
   const totalPassengers = useMemo(
     () => filteredHistory.reduce((sum, trip) => sum + trip.passengerCount, 0),
@@ -146,6 +124,13 @@ export default function DriverHistoryScreen() {
             style={styles.filterInput}
             keyboardType="numeric"
           />
+          <TouchableOpacity
+            style={[styles.primaryButton, loading && styles.disabledButton]}
+            onPress={loadHistory}
+            disabled={loading}
+          >
+            <Text style={styles.primaryButtonText}>{loading ? "Loading..." : "Refresh"}</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.sectionBlock}>
@@ -198,7 +183,9 @@ export default function DriverHistoryScreen() {
           })}
         </View>
 
-        {filteredHistory.length === 0 ? (
+        {error ? <Text style={styles.statusText}>{error}</Text> : null}
+        {!error && loading ? <Text style={styles.statusText}>Loading history...</Text> : null}
+        {!error && !loading && filteredHistory.length === 0 ? (
           <Text style={styles.statusText}>No trips match your filters.</Text>
         ) : null}
       </ScrollView>
@@ -282,6 +269,22 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "700",
     color: "#1d4ed8",
+  },
+  primaryButton: {
+    height: 44,
+    borderRadius: 10,
+    backgroundColor: "#1d4ed8",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 6,
+  },
+  disabledButton: {
+    opacity: 0.6,
+  },
+  primaryButtonText: {
+    color: "#fff",
+    fontSize: 13,
+    fontWeight: "700",
   },
   filterInput: {
     height: 44,
