@@ -12,8 +12,12 @@ import RegisterScreen from "./src/screens/RegisterScreen";
 import ScheduleScreen from "./src/screens/ScheduleScreen";
 import MapScreen from "./src/screens/MapScreen";
 import ProfileScreen from "./src/screens/ProfileScreen";
+<<<<<<< HEAD
 import DriverReservationsScreen from "./src/screens/DriverReservationsScreen";
 import DriverHistoryScreen from "./src/screens/DriverHistoryScreen";
+=======
+import MyBookingsScreen from "./src/screens/MyBookingsScreen";
+>>>>>>> 1cf79b9467c8d9e2f179e874dacc668d47e71356
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -94,8 +98,15 @@ export default function App() {
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Register" component={RegisterScreen} />
+<<<<<<< HEAD
         <Stack.Screen name="PassengerTabs" component={PassengerTabs} />
         <Stack.Screen name="DriverTabs" component={DriverTabs} />
+=======
+
+        {/* Bottom navbar after login */}
+        <Stack.Screen name="MainTabs" component={MainTabs} />
+        <Stack.Screen name="MyBookings" component={MyBookingsScreen} />
+>>>>>>> 1cf79b9467c8d9e2f179e874dacc668d47e71356
       </Stack.Navigator>
     </NavigationContainer>
   );

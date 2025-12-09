@@ -17,4 +17,10 @@ const reservationSchema = new mongoose.Schema({
   },
 });
 
+// Ensure a user can only have one active reservation per shuttle
+reservationSchema.index(
+  { user: 1, shuttle: 1, status: 1 },
+  { unique: true, partialFilterExpression: { status: "active" } }
+);
+
 export default mongoose.model("Reservation", reservationSchema);

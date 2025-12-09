@@ -8,8 +8,10 @@ import {
   StatusBar,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
+  Alert,
 } from "react-native";
 import AppHeader from "../components/AppHeader";
 import { fetchShuttles, reserveSeat } from "../services/shuttleService";
@@ -24,6 +26,18 @@ export default function ViewScheduleScreen() {
   const [selectedSeat, setSelectedSeat] = useState(null);
   const [reserveMessage, setReserveMessage] = useState("");
   const [reserving, setReserving] = useState(false);
+  const [confirmVisible, setConfirmVisible] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const todayLabel = useMemo(() => {
+    const now = new Date();
+    return now.toLocaleDateString(undefined, {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    });
+  }, []);
 
   useEffect(() => {
     const load = async () => {
@@ -58,6 +72,12 @@ export default function ViewScheduleScreen() {
     [shuttles]
   );
 
+  const filteredTrips = useMemo(() => {
+    if (!searchQuery.trim()) return trips;
+    const query = searchQuery.toLowerCase().trim();
+    return trips.filter((trip) => trip.route.toLowerCase().includes(query));
+  }, [trips, searchQuery]);
+
   const seatMap = useMemo(() => {
     if (!selectedTrip) return [];
     const totalSeats = 20;
@@ -91,6 +111,7 @@ export default function ViewScheduleScreen() {
     setSelectedTrip(null);
     setSelectedSeat(null);
     setReserveMessage("");
+    setConfirmVisible(false);
     // Refresh shuttles to get latest seat availability
     try {
       const data = await fetchShuttles();
@@ -100,12 +121,18 @@ export default function ViewScheduleScreen() {
     }
   };
 
-  const handleReserve = async () => {
+  const handleReservePress = () => {
     if (!selectedTrip) return;
     if (!selectedSeat) {
       setReserveMessage("Please select a seat.");
       return;
     }
+    setReserveMessage("");
+    setConfirmVisible(true);
+  };
+
+  const handleReserve = async () => {
+    if (!selectedTrip || !selectedSeat) return;
     try {
       setReserving(true);
       setReserveMessage("");
@@ -117,6 +144,11 @@ export default function ViewScheduleScreen() {
         token
       );
       setReserveMessage("Seat reserved!");
+      // Close both popups after success
+      setConfirmVisible(false);
+      setModalVisible(false);
+      setSelectedTrip(null);
+      setSelectedSeat(null);
       // Refresh shuttles to reflect updated seats
       const data = await fetchShuttles();
       setShuttles(data);
@@ -135,11 +167,24 @@ export default function ViewScheduleScreen() {
         );
       }
     } catch (err) {
-      setReserveMessage(err?.message || "Reservation failed");
+      const message = err?.message || "Reservation failed";
+      setReserveMessage(message);
+      // Show an obvious popup and close both modals
+      Alert.alert("Reservation Error", message, [{ text: "OK" }]);
+      setConfirmVisible(false);
+      setModalVisible(false);
+      setSelectedTrip(null);
+      setSelectedSeat(null);
     } finally {
       setReserving(false);
     }
   };
+
+  const seatsAfterBooking = useMemo(() => {
+    if (!selectedTrip) return null;
+    const remaining = (selectedTrip.seatsAvailable ?? 0) - 1;
+    return remaining >= 0 ? remaining : 0;
+  }, [selectedTrip]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -151,62 +196,80 @@ export default function ViewScheduleScreen() {
 
         <View style={styles.welcomeWrap}>
           <Text style={styles.welcomeText}>WELCOME @USER!</Text>
-          <Text style={styles.dateText}>TODAY IS JANUARY 14, 2025(TUESDAY)</Text>
+          <Text style={styles.dateText}>{todayLabel}</Text>
         </View>
 
-        <View style={styles.actionsRow}>
-          <TouchableOpacity style={styles.actionButton}>
-            <Text style={styles.actionText}>VIEW SCHEDULE</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton}>
-            <Text style={styles.actionText}>MY BOOKINGS</Text>
-          </TouchableOpacity>
-        </View>
-
-        <TouchableOpacity style={styles.searchBar}>
+        <View style={styles.searchBar}>
           <Image
             source={require("../../assets/searchIcon0.png")}
             style={styles.searchIcon}
             resizeMode="contain"
           />
-          <Text style={styles.searchText}>SEARCH</Text>
-        </TouchableOpacity>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search routes..."
+            placeholderTextColor="#9ca3af"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity
+              onPress={() => setSearchQuery("")}
+              style={styles.clearButton}
+            >
+              <Text style={styles.clearText}>×</Text>
+            </TouchableOpacity>
+          )}
+        </View>
 
         {loading ? (
           <Text style={styles.statusText}>Loading schedules...</Text>
         ) : error ? (
           <Text style={styles.statusText}>{error}</Text>
-        ) : trips.length === 0 ? (
-          <Text style={styles.statusText}>No scheduled trips found.</Text>
+        ) : filteredTrips.length === 0 ? (
+          <Text style={styles.statusText}>
+            {searchQuery.trim()
+              ? `No trips found matching "${searchQuery}"`
+              : "No scheduled trips found."}
+          </Text>
         ) : (
-          trips.map((trip) => (
-            <TouchableOpacity
-              key={trip.id}
-              style={styles.tripCard}
-              onPress={() => handleTripPress(trip)}
-              activeOpacity={0.9}
-            >
-              <View style={styles.circle}>
-                <Image
-                  source={require("../../assets/routereserve-icon.png")}
-                  style={styles.circleIcon}
-                  resizeMode="contain"
-                />
-              </View>
-              <View style={styles.tripBody}>
-                <Text style={styles.tripTitle}>{trip.title}</Text>
-                {!!trip.time && (
-                  <Text style={styles.detailText}>Time: {trip.time}</Text>
-                )}
-                <Text style={styles.detailText}>Route: {trip.route}</Text>
-                {!!trip.seats && (
-                  <Text style={styles.detailText}>
-                    Available Seats: {trip.seats}
-                  </Text>
-                )}
-              </View>
-            </TouchableOpacity>
-          ))
+          <View style={styles.sectionBlock}>
+            <Text style={styles.sectionTitle}>
+              Available Trips{searchQuery.trim() ? ` (${filteredTrips.length})` : ""}
+            </Text>
+            <View style={styles.cardList}>
+              {filteredTrips.map((trip) => (
+                <TouchableOpacity
+                  key={trip.id}
+                  style={styles.tripCard}
+                  onPress={() => handleTripPress(trip)}
+                  activeOpacity={0.92}
+                >
+                  <View style={styles.circle}>
+                    <Image
+                      source={require("../../assets/routereserve-icon.png")}
+                      style={styles.circleIcon}
+                      resizeMode="contain"
+                    />
+                  </View>
+                  <View style={styles.tripBody}>
+                    <Text style={styles.tripTitle}>{trip.title}</Text>
+                    {!!trip.time && (
+                      <Text style={styles.detailText}>Time: {trip.time}</Text>
+                    )}
+                    <Text style={styles.detailText}>Route: {trip.route}</Text>
+                    {!!trip.seats && (
+                      <Text style={styles.detailText}>
+                        Available Seats: {trip.seats}
+                      </Text>
+                    )}
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
         )}
       </ScrollView>
 
@@ -278,7 +341,7 @@ export default function ViewScheduleScreen() {
             <TouchableOpacity
               style={styles.reserveButton}
               activeOpacity={0.9}
-              onPress={handleReserve}
+              onPress={handleReservePress}
               disabled={reserving}
             >
               <Text style={styles.reserveText}>
@@ -297,7 +360,64 @@ export default function ViewScheduleScreen() {
               </View>
             )}
           </View>
-    </View>
+        </View>
+      </Modal>
+
+      <Modal
+        animationType="fade"
+        transparent
+        visible={confirmVisible}
+        onRequestClose={() => setConfirmVisible(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.confirmCard}>
+            <View style={styles.confirmHeader}>
+              <Text style={styles.modalTitle}>TRIP DETAILS</Text>
+              <Pressable
+                onPress={() => setConfirmVisible(false)}
+                style={styles.closeButton}
+              >
+                <Text style={styles.closeText}>×</Text>
+              </Pressable>
+            </View>
+
+            <View style={styles.confirmBody}>
+              <Text style={styles.confirmItem}>
+                Time: {selectedTrip?.time || "TBD"}
+              </Text>
+              <Text style={styles.confirmItem}>
+                Route: {selectedTrip?.route || "Destination"}
+              </Text>
+              <Text style={styles.confirmItem}>
+                Seat Reserved: {selectedSeat ? `Seat ${selectedSeat}` : "N/A"}
+              </Text>
+              <Text style={styles.confirmItem}>
+                Available Seats (after booking):{" "}
+                {seatsAfterBooking ?? "Updating"}
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              style={styles.confirmButton}
+              activeOpacity={0.9}
+              onPress={handleReserve}
+              disabled={reserving}
+            >
+              <Text style={styles.confirmButtonText}>
+                {reserving ? "PROCESSING..." : "Confirm Reservation"}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.cancelButton}
+              activeOpacity={0.9}
+              onPress={() => setConfirmVisible(false)}
+              disabled={reserving}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </Modal>
     </SafeAreaView>
   );
@@ -306,86 +426,102 @@ export default function ViewScheduleScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: "#f7f8fb",
   },
   scrollContent: {
     paddingHorizontal: 16,
     paddingTop: 0,
     paddingBottom: 32,
-    gap: 12,
+    gap: 16,
   },
   headerEdgeToEdge: {
     marginHorizontal: -16,
   },
   welcomeWrap: {
     gap: 2,
+    paddingVertical: 6,
   },
   welcomeText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "700",
-    color: "#000",
+    color: "#111827",
   },
   dateText: {
     fontSize: 12,
-    fontWeight: "700",
-    color: "#000",
-  },
-  actionsRow: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  actionButton: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: "#999",
-    borderRadius: 4,
-    height: 38,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#f8f8f8",
-  },
-  actionText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#000",
+    fontWeight: "600",
+    color: "#4b5563",
   },
   searchBar: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
     borderWidth: 1,
-    borderColor: "#999",
-    borderRadius: 6,
-    height: 38,
+    borderColor: "#c4c4c4",
+    borderRadius: 10,
+    height: 44,
     paddingHorizontal: 12,
-    backgroundColor: "#fff",
+    backgroundColor: "#f9f9f9",
   },
-  searchText: {
+  searchInput: {
+    flex: 1,
     fontSize: 12,
     fontWeight: "700",
-    color: "#000",
+    color: "#374151",
+    padding: 0,
   },
   searchIcon: {
     height: 18,
     width: 18,
   },
+  clearButton: {
+    height: 24,
+    width: 24,
+    borderRadius: 12,
+    backgroundColor: "#d1d5db",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  clearText: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#fff",
+    lineHeight: 18,
+  },
+  sectionBlock: {
+    gap: 10,
+  },
+  sectionTitle: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: "#1f2937",
+    marginTop: 4,
+    marginBottom: 4,
+    textTransform: "uppercase",
+  },
+  cardList: {
+    gap: 10,
+  },
   tripCard: {
     flexDirection: "row",
     backgroundColor: "#fff",
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#c4c4c4",
+    borderRadius: 12,
     padding: 16,
     gap: 14,
     alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    shadowColor: "#000",
+    shadowOpacity: 0.04,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 3 },
   },
   circle: {
     height: 52,
     width: 52,
     borderRadius: 26,
     borderWidth: 1,
-    borderColor: "#7d7d7d",
-    backgroundColor: "#fff",
+    borderColor: "#d1d5db",
+    backgroundColor: "#f9fafb",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -395,22 +531,22 @@ const styles = StyleSheet.create({
   },
   tripBody: {
     flex: 1,
-    gap: 4,
+    gap: 6,
   },
   tripTitle: {
     fontSize: 14,
-    fontWeight: "700",
-    color: "#000",
+    fontWeight: "800",
+    color: "#111827",
   },
   detailText: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: "700",
-    color: "#000",
+    color: "#111827",
   },
   statusText: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#444",
+    color: "#4b5563",
     textAlign: "center",
     marginTop: 8,
   },
@@ -423,23 +559,23 @@ const styles = StyleSheet.create({
   },
   modalCard: {
     width: "100%",
-    maxWidth: 360,
+    maxWidth: 400,
     backgroundColor: "#fff",
-    borderRadius: 14,
+    borderRadius: 16,
     paddingHorizontal: 20,
     paddingTop: 18,
     paddingBottom: 16,
+    gap: 10,
   },
   modalHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 12,
   },
   modalTitle: {
     fontSize: 15,
-    fontWeight: "800",
-    color: "#000",
+    fontWeight: "900",
+    color: "#0a0a0a",
   },
   closeButton: {
     height: 32,
@@ -449,10 +585,11 @@ const styles = StyleSheet.create({
     borderColor: "#999",
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: "#f5f5f5",
   },
   closeText: {
     fontSize: 22,
-    fontWeight: "800",
+    fontWeight: "900",
     color: "#000",
     marginTop: -2,
   },
@@ -486,9 +623,10 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   seatSelected: {
-    borderColor: "#1e88e5",
-    shadowColor: "#1e88e5",
-    shadowOpacity: 0.25,
+    borderColor: "#1d4ed8",
+    backgroundColor: "#eef1ff",
+    shadowColor: "#1d4ed8",
+    shadowOpacity: 0.2,
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },
   },
@@ -497,33 +635,83 @@ const styles = StyleSheet.create({
     width: 28,
   },
   reserveButton: {
-    height: 42,
-    borderRadius: 6,
-    backgroundColor: "#000",
+    height: 44,
+    borderRadius: 10,
+    backgroundColor: "#1d4ed8",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 10,
   },
   reserveText: {
     color: "#fff",
-    fontSize: 12,
-    fontWeight: "800",
-    letterSpacing: 0.3,
+    fontSize: 13,
+    fontWeight: "700",
   },
   modalFooter: {
     alignItems: "center",
     gap: 2,
   },
   footerText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "700",
-    color: "#000",
+    color: "#6b7280",
   },
   reserveMessage: {
     textAlign: "center",
     fontSize: 12,
     fontWeight: "700",
-    color: "#000",
+    color: "#111827",
     marginTop: 6,
+  },
+  confirmCard: {
+    width: "100%",
+    maxWidth: 400,
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 16,
+    gap: 10,
+  },
+  confirmHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  confirmBody: {
+    gap: 6,
+    marginBottom: 14,
+  },
+  confirmItem: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#111827",
+  },
+  confirmButton: {
+    height: 44,
+    borderRadius: 10,
+    backgroundColor: "#1d4ed8",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 10,
+  },
+  confirmButtonText: {
+    color: "#fff",
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  cancelButton: {
+    height: 44,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#d9d9d9",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#fff",
+  },
+  cancelButtonText: {
+    color: "#374151",
+    fontSize: 12,
+    fontWeight: "700",
   },
 });

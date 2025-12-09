@@ -10,6 +10,7 @@ import MapScreen from "./MapScreen";
 import ProfileScreen from "./ProfileScreen";
 import DriverReservationsScreen from "./DriverReservationsScreen";
 import DriverHistoryScreen from "./DriverHistoryScreen";
+import PassengerProfileScreen from "./PassengerProfileScreen";
 
 type RootStackParamList = {
   Login: undefined;
@@ -25,7 +26,7 @@ function PassengerTabs() {
     <Tab.Navigator screenOptions={{ headerShown: false }}>
       <Tab.Screen name="Schedule" component={ScheduleScreen} />
       <Tab.Screen name="Map" component={MapScreen} />
-      <Tab.Screen name="Profile" component={ProfileScreen} />
+      <Tab.Screen name="Profile" component={PassengerProfileScreen} />
     </Tab.Navigator>
   );
 }
