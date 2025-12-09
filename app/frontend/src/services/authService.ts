@@ -1,12 +1,6 @@
-<<<<<<< HEAD
-const API_BASE_URL = __DEV__
-  ? "http://192.168.2.9:5000/api" // Development: use your computer's IP
-  : "http://localhost:5000/api"; // Production: adjust as needed
-=======
 const API_BASE_URL = __DEV__ 
   ? "http://192.168.1.2:5000/api"  
   : "http://localhost:5000/api";    
->>>>>>> c3eedf5fdb4a7118df6bb423d711c310ee9d9f55
 
 let authToken: string | null = null;
 let currentUser: any | null = null;
