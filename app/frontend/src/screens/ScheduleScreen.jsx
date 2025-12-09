@@ -48,9 +48,19 @@ export default function ViewScheduleScreen() {
   useEffect(() => {
     const load = async () => {
       try {
+        setLoading(true);
+        setError("");
         const data = await fetchShuttles();
-        setShuttles(data);
+        console.log("Fetched trips data:", data);
+        console.log("Number of trips:", data?.length);
+        if (Array.isArray(data)) {
+          setShuttles(data);
+        } else {
+          console.error("Expected array but got:", typeof data, data);
+          setError("Invalid data format received");
+        }
       } catch (err) {
+        console.error("Error loading trips:", err);
         setError(err?.message || "Failed to load schedules");
       } finally {
         setLoading(false);
@@ -59,29 +69,48 @@ export default function ViewScheduleScreen() {
     load();
   }, []);
 
-  const trips = useMemo(
-    () =>
-      shuttles.map((shuttle, idx) => {
-        const destination = shuttle.destination || shuttle.name || "Route not set";
-        const formattedRoute = destination.replace(/->/g, "→").replace(/\s*->\s*/g, " → ");
-        return {
-          id: shuttle._id || String(idx),
-          shuttleId: shuttle._id,
-          title: `SCHEDULED TRIP ${idx + 1}`,
-          time: shuttle.departureTime || "TBD",
-          route: formattedRoute,
-          seats: `${shuttle.seatsAvailable ?? 0} seats left`,
-          seatsAvailable: shuttle.seatsAvailable ?? 0,
-          takenSeats: shuttle.takenSeats || [],
-        };
-      }),
-    [shuttles]
-  );
+  const trips = useMemo(() => {
+    if (!Array.isArray(shuttles) || shuttles.length === 0) {
+      console.log("No shuttles/trips data available, shuttles:", shuttles);
+      return [];
+    }
+    
+    return shuttles.map((trip, idx) => {
+      // Backend returns trips with: _id, shuttle, shuttleName, driverName, departureTime, destination, direction, seatsAvailable, takenSeats
+      const shuttleName = trip.shuttleName || "Shuttle";
+      const direction = trip.direction === "reverse" ? " (Reverse)" : "";
+      const departureTime = trip.departureTime;
+      
+      // Log if departureTime is missing for debugging
+      if (!departureTime) {
+        console.warn(`Trip ${trip._id} is missing departureTime:`, trip);
+      }
+      
+      return {
+        id: trip._id || String(idx),
+        shuttleId: trip._id, // This is the trip ID, used for reservation
+        tripId: trip._id,
+        title: `${shuttleName} - Trip ${idx + 1}${direction}`,
+        time: departureTime || "TBD",
+        route: trip.destination || "Route not set",
+        seats: `${trip.seatsAvailable ?? 0} seats left`,
+        seatsAvailable: trip.seatsAvailable ?? 0,
+        takenSeats: trip.takenSeats || [],
+        shuttleName: shuttleName,
+        driverName: trip.driverName || null,
+      };
+    });
+  }, [shuttles]);
 
   const filteredTrips = useMemo(() => {
     if (!searchQuery.trim()) return trips;
     const query = searchQuery.toLowerCase().trim();
-    return trips.filter((trip) => trip.route.toLowerCase().includes(query));
+    return trips.filter((trip) => 
+      trip.time?.toLowerCase().includes(query) ||
+      trip.title?.toLowerCase().includes(query) ||
+      trip.shuttleName?.toLowerCase().includes(query) ||
+      trip.route?.toLowerCase().includes(query)
+    );
   }, [trips, searchQuery]);
 
   const seatMap = useMemo(() => {
@@ -143,16 +172,17 @@ export default function ViewScheduleScreen() {
         const activeReservations = myReservations.filter((r) => r.status === "active");
         
         const conflictingReservation = activeReservations.find((reservation) => {
-          const shuttle = reservation.shuttle;
-          if (!shuttle || !shuttle.departureTime) return false;
-          return shuttle.departureTime === selectedTrip.time;
+          const trip = reservation.trip;
+          if (!trip || !trip.departureTime) return false;
+          return trip.departureTime === selectedTrip.time;
         });
 
         if (conflictingReservation) {
+          const conflictingTrip = conflictingReservation.trip;
           const conflictingShuttle = conflictingReservation.shuttle;
           Alert.alert(
             "Time Conflict",
-            `You already have a reservation at ${selectedTrip.time} for ${conflictingShuttle?.name || "another shuttle"}. Please cancel it first or choose a different time.`,
+            `You already have a reservation at ${selectedTrip.time} for ${conflictingShuttle?.name || "another trip"}. Please cancel it first or choose a different time.`,
             [{ text: "OK" }]
           );
           return;
@@ -173,7 +203,7 @@ export default function ViewScheduleScreen() {
       setReserveMessage("");
       const token = getAuthToken();
       await reserveSeat(
-        selectedTrip.shuttleId || selectedTrip.id,
+        selectedTrip.tripId || selectedTrip.shuttleId || selectedTrip.id,
         selectedSeat,
         selectedTrip.route || "Destination",
         token
@@ -184,11 +214,11 @@ export default function ViewScheduleScreen() {
       setModalVisible(false);
       setSelectedTrip(null);
       setSelectedSeat(null);
-      // Refresh shuttles to reflect updated seats
+      // Refresh trips to reflect updated seats
       const data = await fetchShuttles();
       setShuttles(data);
       // update selectedTrip taken seats
-      const updated = data.find((s) => s._id === selectedTrip.shuttleId);
+      const updated = data.find((t) => t._id === selectedTrip.tripId || t._id === selectedTrip.shuttleId);
       if (updated) {
         setSelectedTrip((prev) =>
           prev
@@ -294,7 +324,9 @@ export default function ViewScheduleScreen() {
                     {!!trip.time && (
                       <Text style={styles.detailText}>Time: {trip.time}</Text>
                     )}
-                    <Text style={styles.detailText}>Route: {trip.route}</Text>
+                    {trip.driverName && (
+                      <Text style={styles.detailText}>Driver: {trip.driverName}</Text>
+                    )}
                     {!!trip.seats && (
                       <Text style={styles.detailText}>
                         Available Seats: {trip.seats}
@@ -417,11 +449,18 @@ export default function ViewScheduleScreen() {
             </View>
 
             <View style={styles.confirmBody}>
+              {selectedTrip?.shuttleName && (
+                <Text style={styles.confirmItem}>
+                  Shuttle: {selectedTrip.shuttleName}
+                </Text>
+              )}
+              {selectedTrip?.driverName && (
+                <Text style={styles.confirmItem}>
+                  Driver: {selectedTrip.driverName}
+                </Text>
+              )}
               <Text style={styles.confirmItem}>
                 Time: {selectedTrip?.time || "TBD"}
-              </Text>
-              <Text style={styles.confirmItem}>
-                Route: {selectedTrip?.route || "Destination"}
               </Text>
               <Text style={styles.confirmItem}>
                 Seat Reserved: {selectedSeat ? `Seat ${selectedSeat}` : "N/A"}

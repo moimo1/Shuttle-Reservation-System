@@ -195,7 +195,10 @@ export default function NotificationsScreen() {
                     <Text style={styles.cardMessage}>{notification.message}</Text>
                     {notification.shuttle && (
                       <Text style={styles.cardDetail}>
-                        Shuttle: {notification.shuttle.name} • {notification.shuttle.departureTime}
+                        Shuttle: {notification.shuttle.name}
+                        {notification.reservation?.trip?.departureTime && 
+                          ` • ${notification.reservation.trip.departureTime}`
+                        }
                       </Text>
                     )}
                     <Text style={styles.cardTime}>

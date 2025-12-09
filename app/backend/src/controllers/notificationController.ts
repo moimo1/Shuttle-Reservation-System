@@ -12,8 +12,10 @@ export const scheduleReminder = async (req: any, res: any) => {
       return res.status(400).json({ message: "Reservation ID and hours before departure are required" });
     }
 
-    // Find reservation and populate shuttle
-    const reservation = await Reservation.findById(reservationId).populate("shuttle");
+    // Find reservation and populate trip and shuttle
+    const reservation = await Reservation.findById(reservationId)
+      .populate("shuttle", "name")
+      .populate("trip", "departureTime");
 
     if (!reservation) {
       return res.status(404).json({ message: "Reservation not found" });
@@ -23,16 +25,24 @@ export const scheduleReminder = async (req: any, res: any) => {
       return res.status(403).json({ message: "Unauthorized to schedule reminder for this reservation" });
     }
 
-    // Calculate scheduled time
-    const shuttle = reservation.shuttle as any;
-    const departureTime = new Date(shuttle.departureTime);
+    // Calculate scheduled time from trip departure time
+    const trip = (reservation as any).trip;
+    if (!trip || !trip.departureTime) {
+      return res.status(400).json({ message: "Trip departure time not found" });
+    }
+
+    // Parse departure time (format: "HH:MM")
+    const [hours, minutes] = trip.departureTime.split(":").map(Number);
+    const today = new Date();
+    const departureTime = new Date(today.setHours(hours, minutes, 0, 0));
     const scheduledFor = new Date(departureTime.getTime() - hoursBeforeDeparture * 60 * 60 * 1000);
 
     // Create notification
+    const shuttle = (reservation as any).shuttle;
     const notification = new Notification({
       user: userId,
       reservation: reservationId,
-      shuttle: shuttle._id,
+      shuttle: shuttle?._id || shuttle,
       type: "reminder",
       title: "Shuttle Reminder",
       message: `Your shuttle departs in ${hoursBeforeDeparture} hour(s)`,
@@ -56,8 +66,14 @@ export const getUserNotifications = async (req: any, res: any) => {
     const userId = req.user?.id;
 
     const notifications = await Notification.find({ user: userId })
-      .populate("shuttle")
-      .populate("reservation")
+      .populate("shuttle", "name")
+      .populate({
+        path: "reservation",
+        populate: {
+          path: "trip",
+          select: "departureTime route direction"
+        }
+      })
       .sort({ createdAt: -1 });
 
     res.json(notifications);

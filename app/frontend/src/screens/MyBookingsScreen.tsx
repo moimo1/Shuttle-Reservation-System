@@ -120,8 +120,10 @@ export default function MyBookingsScreen() {
     () =>
       reservations.map((r, idx) => {
         const shuttle = r.shuttle || {};
-        // Try multiple possible fields for departure time
+        const trip = r.trip || {};
+        // Get departure time from trip first, then fallback to shuttle
         const timeValue = 
+          (trip as any).departureTime || 
           (shuttle as any).departureTime || 
           (shuttle as any).time || 
           (shuttle as any).departureDate ||
@@ -131,15 +133,8 @@ export default function MyBookingsScreen() {
           title: `Booking #${idx + 1}`,
           status: r.status || "active",
           time: timeValue,
-          route:
-            ((shuttle as any).destination ||
-              (shuttle as any).name ||
-              r.destination ||
-              "Route not set")
-              .replace(/->/g, "→")
-              .replace(/\s*->\s*/g, " → "),
-          shuttleNumber:
-            (shuttle as any).shuttleNumber || (shuttle as any).name || "Shuttle",
+          route: (trip as any).route || r.destination || "Route not set",
+          shuttleNumber: (shuttle as any).name || "Shuttle",
           createdAt: r.createdAt,
           seatNumber: r.seatNumber,
         };
@@ -211,29 +206,11 @@ export default function MyBookingsScreen() {
                   <Text style={styles.detailText}>
                     Time: {formatDateTime(booking.time)}
                   </Text>
-                  <Text style={styles.detailText}>Route: {booking.route}</Text>
                   <Text style={styles.detailText}>
                     Shuttle Number: {booking.shuttleNumber}
                   </Text>
                   {!!booking.seatNumber && (
                     <Text style={styles.detailText}>Seat: {booking.seatNumber}</Text>
-                  )}
-                  {booking.isRecurring && (
-                    <>
-                      <Text style={styles.recurringBadge}>
-                        🔄 Recurring ({booking.recurrenceType === "daily" ? "Daily" : "Weekly"})
-                      </Text>
-                      {booking.scheduledDate && (
-                        <Text style={styles.detailText}>
-                          Date: {new Date(booking.scheduledDate).toLocaleDateString()}
-                        </Text>
-                      )}
-                      {booking.recurrenceEndDate && (
-                        <Text style={styles.detailText}>
-                          Until: {new Date(booking.recurrenceEndDate).toLocaleDateString()}
-                        </Text>
-                      )}
-                    </>
                   )}
                 </View>
               </View>

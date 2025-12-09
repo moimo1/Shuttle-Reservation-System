@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 const reservationSchema = new mongoose.Schema({
   user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   shuttle: { type: mongoose.Schema.Types.ObjectId, ref: "Shuttle", required: true },
+  trip: { type: mongoose.Schema.Types.ObjectId, ref: "Trip", required: true },
   seatNumber: { type: Number, required: true },
   destination: { type: String, required: true },
   createdAt: { type: Date, default: Date.now },
@@ -17,9 +18,9 @@ const reservationSchema = new mongoose.Schema({
   },
 });
 
-// Ensure a user can only have one active reservation per shuttle
+// Ensure a user can only have one active reservation per trip
 reservationSchema.index(
-  { user: 1, shuttle: 1, status: 1 },
+  { user: 1, trip: 1, status: 1 },
   { unique: true, partialFilterExpression: { status: "active" } }
 );
 

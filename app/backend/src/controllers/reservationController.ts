@@ -1,78 +1,104 @@
 import Reservation from "../models/Reservation.js";
 import Shuttle from "../models/Shuttle.js";
+import Trip from "../models/Trip.js";
 import Notification from "../models/Notification.js";
+import User from "../models/User.js";
 
 export const createReservation = async (req: any, res: any) => {
   try {
-    const { shuttleId, destination } = req.body;
+    const { tripId, destination, seatNumber } = req.body;
     const userId = req.user?.id;
 
-    if (!shuttleId) {
-      return res.status(400).json({ message: "Shuttle ID is required" });
+    if (!tripId) {
+      return res.status(400).json({ message: "Trip ID is required" });
     }
 
     if (!destination) {
       return res.status(400).json({ message: "Destination is required" });
     }
 
-    const shuttle = await Shuttle.findById(shuttleId);
-    if (!shuttle) {
-      return res.status(404).json({ message: "Shuttle not found" });
+    const trip = await Trip.findById(tripId).populate({
+      path: "shuttle",
+      select: "name seatsCapacity driver",
+      populate: {
+        path: "driver",
+        select: "name email",
+      },
+    });
+    if (!trip) {
+      return res.status(404).json({ message: "Trip not found" });
     }
 
-    if (shuttle.seatsAvailable <= 0) {
-      return res.status(400).json({ message: "No available seats on this shuttle for today" });
-    }
+    const capacity = trip.seatsCapacity || (trip.shuttle as any)?.seatsCapacity || 20;
+    const parsedSeatNumber = seatNumber ? parseInt(seatNumber, 10) : undefined;
+    const seatToUse = !isNaN(parsedSeatNumber as any) ? parsedSeatNumber : undefined;
 
-    // Check if user already has a reservation for this shuttle
+    // Check if user already has a reservation for this trip
     const existingUserReservation = await Reservation.findOne({
-      shuttle: shuttleId,
+      trip: tripId,
       user: userId,
       status: "active",
     });
     if (existingUserReservation) {
-      return res.status(400).json({ message: "You already reserved a seat for this shuttle" });
+      return res.status(400).json({ message: "You already reserved a seat for this trip" });
     }
 
-    // Check if user has an active reservation at the same departure time in a different shuttle
+    // Check if user has an active reservation at the same departure time in a different trip
     const userActiveReservations = await Reservation.find({
       user: userId,
       status: "active",
-    }).populate("shuttle", "departureTime name");
+    }).populate({ path: "trip", select: "departureTime" });
 
-    const conflictingReservation = userActiveReservations.find((res: any) => {
-      const existingShuttle = res.shuttle;
-      if (!existingShuttle || !existingShuttle.departureTime) return false;
-      // Compare departure times - they should match exactly
-      return existingShuttle.departureTime === shuttle.departureTime;
+    const conflictingReservation = userActiveReservations.find((resv: any) => {
+      const existingTrip = resv.trip;
+      if (!existingTrip || !existingTrip.departureTime) return false;
+      return existingTrip.departureTime === trip.departureTime;
     });
 
     if (conflictingReservation) {
-      const conflictingShuttle = (conflictingReservation as any).shuttle;
       return res.status(400).json({ 
-        message: `You already have a reservation at ${shuttle.departureTime} for ${conflictingShuttle?.name || "another shuttle"}. Please cancel it first or choose a different time.` 
+        message: `You already have a reservation at ${trip.departureTime} on another trip. Please cancel it first or choose a different time.` 
       });
+    }
+
+    // If seat requested, ensure not taken; otherwise assign next available
+    let seatNumberToAssign = seatToUse;
+    const taken = await Reservation.find({ trip: tripId, status: "active" }).select("seatNumber");
+    const takenSet = new Set(taken.map((t) => t.seatNumber));
+    if (seatNumberToAssign) {
+      if (seatNumberToAssign < 1 || seatNumberToAssign > capacity || takenSet.has(seatNumberToAssign)) {
+        return res.status(400).json({ message: "Seat already taken or invalid" });
+      }
+    } else {
+      for (let i = 1; i <= capacity; i++) {
+        if (!takenSet.has(i)) {
+          seatNumberToAssign = i;
+          break;
+        }
+      }
+      if (!seatNumberToAssign) {
+        return res.status(400).json({ message: "No seats available" });
+      }
     }
 
     const reservation = new Reservation({
       user: userId,
-      shuttle: shuttleId,
-      seatNumber: shuttle.seatsAvailable,
+      shuttle: trip.shuttle,
+      trip: tripId,
+      seatNumber: seatNumberToAssign,
       destination: destination,
     });
     await reservation.save();
 
-    await Shuttle.findByIdAndUpdate(shuttleId, { $inc: { seatsAvailable: -1 } });
-
-    // Create confirmation notification
+    // Create confirmation notification for passenger
     try {
       const confirmationNotification = new Notification({
         user: userId,
         reservation: reservation._id,
-        shuttle: shuttleId,
+        shuttle: trip.shuttle,
         type: "confirmation",
         title: "Reservation Confirmed",
-        message: `Your seat ${reservation.seatNumber} has been reserved for ${shuttle.name} departing at ${shuttle.departureTime}`,
+        message: `Your seat ${reservation.seatNumber} has been reserved for ${trip.departureTime}`,
         scheduledFor: new Date(),
         isSent: true,
         sentAt: new Date(),
@@ -81,6 +107,43 @@ export const createReservation = async (req: any, res: any) => {
     } catch (notifError) {
       console.error("Error creating confirmation notification:", notifError);
       // Don't fail the reservation if notification creation fails
+    }
+
+    // Create notification for driver if shuttle has an assigned driver
+    try {
+      const shuttle = trip.shuttle as any;
+      const driver = shuttle?.driver;
+      
+      // Handle both populated driver object and driver ID
+      const driverId = driver?._id || driver;
+      
+      if (driverId) {
+        // Get passenger info
+        const passenger = await User.findById(userId).select("name");
+        const passengerName = passenger?.name || "A passenger";
+        
+        // Get shuttle ID (could be object or ID)
+        const shuttleId = (trip.shuttle as any)?._id || trip.shuttle;
+        
+        const driverNotification = new Notification({
+          user: driverId,
+          reservation: reservation._id,
+          shuttle: shuttleId,
+          type: "confirmation",
+          title: "New Booking",
+          message: `${passengerName} booked seat ${reservation.seatNumber} for ${trip.departureTime} on ${shuttle?.name || "your shuttle"}`,
+          scheduledFor: new Date(),
+          isSent: true,
+          sentAt: new Date(),
+        });
+        await driverNotification.save();
+        console.log(`✅ Driver notification created for driver ${driverId}`);
+      } else {
+        console.log(`⚠️  No driver assigned to shuttle ${shuttle?._id || trip.shuttle}`);
+      }
+    } catch (driverNotifError) {
+      console.error("Error creating driver notification:", driverNotifError);
+      // Don't fail the reservation if driver notification creation fails
     }
 
     res.status(201).json({
@@ -95,7 +158,9 @@ export const createReservation = async (req: any, res: any) => {
 
 export const getUserReservations = async (req: any, res: any) => {
   try {
-    const reservations = await Reservation.find({ user: req.user.id }).populate("shuttle");
+    const reservations = await Reservation.find({ user: req.user.id })
+      .populate("shuttle", "name")
+      .populate("trip", "departureTime route direction");
     res.json(reservations);
   } catch (err) {
     res.status(500).json({ message: "Server error" });
@@ -125,20 +190,25 @@ export const cancelReservation = async (req: any, res: any) => {
       return res.status(400).json({ message: "Reservation is already cancelled" });
     }
 
-    await Shuttle.findByIdAndUpdate(
-      reservation.shuttle,
-      { $inc: { seatsAvailable: 1 } }
-    );
-
-    // Populate shuttle for notification
-    await reservation.populate("shuttle");
+    // Populate shuttle (with driver) and trip for notification
+    await reservation.populate([
+      {
+        path: "shuttle",
+        select: "name driver",
+        populate: {
+          path: "driver",
+          select: "name email",
+        },
+      },
+      "trip",
+    ]);
 
     // Update reservation status to cancelled
     reservation.status = "cancelled";
     reservation.cancelledAt = new Date();
     await reservation.save();
 
-    // Create cancellation notification
+    // Create cancellation notification for passenger
     try {
       const shuttle = reservation.shuttle as any;
       const cancellationNotification = new Notification({
@@ -147,7 +217,7 @@ export const cancelReservation = async (req: any, res: any) => {
         shuttle: reservation.shuttle,
         type: "cancellation",
         title: "Reservation Cancelled",
-        message: `Your reservation for ${shuttle?.name || "shuttle"} departing at ${shuttle?.departureTime || "TBD"} has been cancelled`,
+        message: `Your reservation for ${shuttle?.name || "shuttle"} departing at ${(reservation as any).trip?.departureTime || "TBD"} has been cancelled`,
         scheduledFor: new Date(),
         isSent: true,
         sentAt: new Date(),
@@ -156,6 +226,44 @@ export const cancelReservation = async (req: any, res: any) => {
     } catch (notifError) {
       console.error("Error creating cancellation notification:", notifError);
       // Don't fail the cancellation if notification creation fails
+    }
+
+    // Create notification for driver if shuttle has an assigned driver
+    try {
+      const shuttle = reservation.shuttle as any;
+      const driver = shuttle?.driver;
+      
+      // Handle both populated driver object and driver ID
+      const driverId = driver?._id || driver;
+      
+      if (driverId) {
+        // Get passenger info
+        const passenger = await User.findById(userId).select("name");
+        const passengerName = passenger?.name || "A passenger";
+        const trip = (reservation as any).trip;
+        
+        // Get shuttle ID (could be object or ID)
+        const shuttleId = (reservation.shuttle as any)?._id || reservation.shuttle;
+        
+        const driverCancellationNotification = new Notification({
+          user: driverId,
+          reservation: reservation._id,
+          shuttle: shuttleId,
+          type: "cancellation",
+          title: "Booking Cancelled",
+          message: `${passengerName} cancelled their reservation for seat ${reservation.seatNumber} on ${shuttle?.name || "your shuttle"} departing at ${trip?.departureTime || "TBD"}`,
+          scheduledFor: new Date(),
+          isSent: true,
+          sentAt: new Date(),
+        });
+        await driverCancellationNotification.save();
+        console.log(`✅ Driver cancellation notification created for driver ${driverId}`);
+      } else {
+        console.log(`⚠️  No driver assigned to shuttle ${shuttle?._id || reservation.shuttle}`);
+      }
+    } catch (driverNotifError) {
+      console.error("Error creating driver cancellation notification:", driverNotifError);
+      // Don't fail the cancellation if driver notification creation fails
     }
 
     return res.status(200).json({

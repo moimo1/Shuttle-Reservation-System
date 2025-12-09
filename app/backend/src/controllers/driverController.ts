@@ -1,37 +1,45 @@
 import Reservation from "../models/Reservation.js";
 import Shuttle from "../models/Shuttle.js";
+import Trip from "../models/Trip.js";
+import User from "../models/User.js";
 
 export const getShuttleReservations = async (req: any, res: any) => {
   try {
-    const { shuttleId, departureTime, destination } = req.query;
-
-    let query: any = { status: "active" };
-
-    if (shuttleId) {
-      query.shuttle = shuttleId;
-    } else if (departureTime) {
-      const shuttles = await Shuttle.find({ departureTime });
-      const shuttleIds = shuttles.map((s) => s._id);
-      query.shuttle = { $in: shuttleIds };
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
     }
 
-    if (destination) {
-      query.destination = { $regex: destination, $options: "i" };
+    // Get the driver's assigned shuttles
+    const driverShuttles = await Shuttle.find({ driver: userId }).select("_id");
+    const shuttleIds = driverShuttles.map((s) => s._id);
+
+    if (shuttleIds.length === 0) {
+      return res.json([]);
     }
 
-    const reservations = await Reservation.find(query)
+    // Get reservations for the driver's shuttles
+    const reservations = await Reservation.find({
+      status: "active",
+      shuttle: { $in: shuttleIds },
+    })
       .populate("user", "name email")
-      .populate("shuttle", "name departureTime")
+      .populate("shuttle", "name")
+      .populate("trip", "departureTime route direction")
       .sort({ seatNumber: 1 });
 
-    const passengers = reservations.map((reservation: any) => ({
-      name: reservation.user.name,
-      email: reservation.user.email,
-      destination: reservation.destination,
-      seatNumber: reservation.seatNumber,
-      departureTime: reservation.shuttle.departureTime,
-      shuttleName: reservation.shuttle.name,
-    }));
+    const passengers = reservations.map((reservation: any) => {
+      const trip = reservation.trip;
+      const shuttle = reservation.shuttle;
+      return {
+        name: reservation.user?.name || "Unknown",
+        email: reservation.user?.email || "",
+        destination: reservation.destination,
+        seatNumber: reservation.seatNumber,
+        departureTime: trip?.departureTime || null,
+        shuttleName: shuttle?.name || "Shuttle",
+      };
+    });
 
     res.json(passengers);
   } catch (err) {
@@ -42,10 +50,26 @@ export const getShuttleReservations = async (req: any, res: any) => {
 
 export const getDriverHistory = async (req: any, res: any) => {
   try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
     const { date, destination, minPassengers } = req.query;
 
+    // Get the driver's assigned shuttles
+    const driverShuttles = await Shuttle.find({ driver: userId }).select("_id");
+    const shuttleIds = driverShuttles.map((s) => s._id);
+
+    if (shuttleIds.length === 0) {
+      return res.json([]);
+    }
+
     // Get all reservations (including past ones for history)
-    let query: any = { status: "active" };
+    let query: any = { 
+      status: "active",
+      shuttle: { $in: shuttleIds },
+    };
 
     if (date) {
       const startDate = new Date(date);
@@ -61,35 +85,37 @@ export const getDriverHistory = async (req: any, res: any) => {
 
     const reservations = await Reservation.find(query)
       .populate("user", "name email")
-      .populate("shuttle", "name departureTime")
+      .populate("shuttle", "name")
+      .populate("trip", "departureTime route direction")
       .sort({ createdAt: -1, seatNumber: 1 });
 
-    // Group reservations by shuttle and date
+    // Group reservations by trip and date
     const tripMap = new Map<string, any>();
 
     reservations.forEach((reservation: any) => {
+      const trip = reservation.trip;
       const shuttle = reservation.shuttle;
-      if (!shuttle) return;
+      if (!trip || !shuttle) return;
 
       const reservationDate = new Date(reservation.createdAt);
       const dateKey = reservationDate.toISOString().split("T")[0];
-      const tripKey = `${shuttle._id}-${dateKey}`;
+      const tripKey = `${trip._id}-${dateKey}`;
 
       if (!tripMap.has(tripKey)) {
         tripMap.set(tripKey, {
           id: tripKey,
           date: dateKey,
-          time: shuttle.departureTime,
+          time: trip.departureTime || "TBD",
           route: shuttle.name,
           passengerCount: 0,
           passengers: [],
         });
       }
 
-      const trip = tripMap.get(tripKey);
-      trip.passengerCount++;
-      trip.passengers.push({
-        name: reservation.user.name,
+      const tripData = tripMap.get(tripKey);
+      tripData.passengerCount++;
+      tripData.passengers.push({
+        name: reservation.user?.name || "Unknown",
         destination: reservation.destination,
       });
     });

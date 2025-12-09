@@ -12,9 +12,12 @@ export type Reservation = {
   shuttle?: {
     _id: string;
     name?: string;
-    destination?: string;
+  };
+  trip?: {
+    _id: string;
     departureTime?: string;
-    shuttleNumber?: string;
+    route?: string;
+    direction?: "forward" | "reverse";
   };
 };
 

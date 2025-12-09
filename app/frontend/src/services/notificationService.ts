@@ -9,11 +9,16 @@ export type Notification = {
     _id: string;
     seatNumber: number;
     destination: string;
+    trip?: {
+      _id: string;
+      departureTime: string;
+      route?: string;
+      direction?: "forward" | "reverse";
+    };
   };
   shuttle: {
     _id: string;
     name: string;
-    departureTime: string;
   };
   type: "reminder" | "confirmation" | "cancellation";
   title: string;

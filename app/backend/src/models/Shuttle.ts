@@ -2,9 +2,13 @@ import mongoose from "mongoose";
 
 const shuttleSchema = new mongoose.Schema({
   name: { type: String, required: true },
-  departureTime: { type: String, required: true },
-  seatsAvailable: { type: Number, required: true, default: 20 },
-  destination: { type: String, required: true, default: "" },
+  baseRoute: { type: String, default: "" },
+  seatsCapacity: { type: Number, required: true, default: 20 },
+  driver: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    default: null,
+  },
 });
 
 export default mongoose.model("Shuttle", shuttleSchema);

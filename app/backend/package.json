@@ -8,7 +8,8 @@
     "dev": "nodemon src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "seed": "tsx src/seed.ts"
+    "seed": "tsx src/seed.ts",
+    "migrate:drop-old-index": "tsx src/scripts/dropOldIndex.ts"
   },
   "keywords": [],
   "author": "",
