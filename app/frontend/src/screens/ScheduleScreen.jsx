@@ -10,6 +10,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Alert,
 } from "react-native";
 import AppHeader from "../components/AppHeader";
 import { fetchShuttles, reserveSeat } from "../services/shuttleService";
@@ -24,6 +25,7 @@ export default function ViewScheduleScreen() {
   const [selectedSeat, setSelectedSeat] = useState(null);
   const [reserveMessage, setReserveMessage] = useState("");
   const [reserving, setReserving] = useState(false);
+  const [confirmVisible, setConfirmVisible] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -91,6 +93,7 @@ export default function ViewScheduleScreen() {
     setSelectedTrip(null);
     setSelectedSeat(null);
     setReserveMessage("");
+    setConfirmVisible(false);
     // Refresh shuttles to get latest seat availability
     try {
       const data = await fetchShuttles();
@@ -100,12 +103,18 @@ export default function ViewScheduleScreen() {
     }
   };
 
-  const handleReserve = async () => {
+  const handleReservePress = () => {
     if (!selectedTrip) return;
     if (!selectedSeat) {
       setReserveMessage("Please select a seat.");
       return;
     }
+    setReserveMessage("");
+    setConfirmVisible(true);
+  };
+
+  const handleReserve = async () => {
+    if (!selectedTrip || !selectedSeat) return;
     try {
       setReserving(true);
       setReserveMessage("");
@@ -117,6 +126,11 @@ export default function ViewScheduleScreen() {
         token
       );
       setReserveMessage("Seat reserved!");
+      // Close both popups after success
+      setConfirmVisible(false);
+      setModalVisible(false);
+      setSelectedTrip(null);
+      setSelectedSeat(null);
       // Refresh shuttles to reflect updated seats
       const data = await fetchShuttles();
       setShuttles(data);
@@ -135,11 +149,24 @@ export default function ViewScheduleScreen() {
         );
       }
     } catch (err) {
-      setReserveMessage(err?.message || "Reservation failed");
+      const message = err?.message || "Reservation failed";
+      setReserveMessage(message);
+      // Show an obvious popup and close both modals
+      Alert.alert("Reservation Error", message, [{ text: "OK" }]);
+      setConfirmVisible(false);
+      setModalVisible(false);
+      setSelectedTrip(null);
+      setSelectedSeat(null);
     } finally {
       setReserving(false);
     }
   };
+
+  const seatsAfterBooking = useMemo(() => {
+    if (!selectedTrip) return null;
+    const remaining = (selectedTrip.seatsAvailable ?? 0) - 1;
+    return remaining >= 0 ? remaining : 0;
+  }, [selectedTrip]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -278,7 +305,7 @@ export default function ViewScheduleScreen() {
             <TouchableOpacity
               style={styles.reserveButton}
               activeOpacity={0.9}
-              onPress={handleReserve}
+              onPress={handleReservePress}
               disabled={reserving}
             >
               <Text style={styles.reserveText}>
@@ -297,7 +324,64 @@ export default function ViewScheduleScreen() {
               </View>
             )}
           </View>
-    </View>
+        </View>
+      </Modal>
+
+      <Modal
+        animationType="fade"
+        transparent
+        visible={confirmVisible}
+        onRequestClose={() => setConfirmVisible(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.confirmCard}>
+            <View style={styles.confirmHeader}>
+              <Text style={styles.modalTitle}>TRIP DETAILS</Text>
+              <Pressable
+                onPress={() => setConfirmVisible(false)}
+                style={styles.closeButton}
+              >
+                <Text style={styles.closeText}>×</Text>
+              </Pressable>
+            </View>
+
+            <View style={styles.confirmBody}>
+              <Text style={styles.confirmItem}>
+                Time: {selectedTrip?.time || "TBD"}
+              </Text>
+              <Text style={styles.confirmItem}>
+                Route: {selectedTrip?.route || "Destination"}
+              </Text>
+              <Text style={styles.confirmItem}>
+                Seat Reserved: {selectedSeat ? `Seat ${selectedSeat}` : "N/A"}
+              </Text>
+              <Text style={styles.confirmItem}>
+                Available Seats (after booking):{" "}
+                {seatsAfterBooking ?? "Updating"}
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              style={styles.confirmButton}
+              activeOpacity={0.9}
+              onPress={handleReserve}
+              disabled={reserving}
+            >
+              <Text style={styles.confirmButtonText}>
+                {reserving ? "PROCESSING..." : "Confirm Reservation"}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.cancelButton}
+              activeOpacity={0.9}
+              onPress={() => setConfirmVisible(false)}
+              disabled={reserving}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </Modal>
     </SafeAreaView>
   );
@@ -525,5 +609,62 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#000",
     marginTop: 6,
+  },
+  confirmCard: {
+    width: "100%",
+    maxWidth: 360,
+    backgroundColor: "#fff",
+    borderRadius: 14,
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 16,
+    borderWidth: 1,
+    borderColor: "#c4c4c4",
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  confirmHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+  confirmBody: {
+    gap: 6,
+    marginBottom: 16,
+  },
+  confirmItem: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#000",
+  },
+  confirmButton: {
+    height: 46,
+    borderRadius: 8,
+    backgroundColor: "#000",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 10,
+  },
+  confirmButtonText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "800",
+    letterSpacing: 0.3,
+  },
+  cancelButton: {
+    height: 44,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#000",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cancelButtonText: {
+    color: "#000",
+    fontSize: 13,
+    fontWeight: "800",
   },
 });

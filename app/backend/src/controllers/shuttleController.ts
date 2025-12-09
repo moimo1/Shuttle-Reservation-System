@@ -69,6 +69,16 @@ export const reserveShuttle = async (req: any, res: any) => {
     });
     if (existing) return res.status(400).json({ message: "Seat already taken" });
 
+    const existingUserReservation = await Reservation.findOne({
+      shuttle: shuttle._id,
+      user: req.user.id,
+      status: "active",
+    });
+    if (existingUserReservation)
+      return res
+        .status(400)
+        .json({ message: "You already reserved a seat for this shuttle" });
+
     const reservedCount = await Reservation.countDocuments({
       shuttle: shuttle._id,
       status: "active",
