@@ -7,7 +7,7 @@ import { login } from "../services/authService";
 
 import ScheduleScreen from "./ScheduleScreen";
 import MapScreen from "./MapScreen";
-import ProfileScreen from "./ProfileScreen";
+import PassengerProfileScreen from "./PassengerProfileScreen";
 
 type RootStackParamList = {
   Login: undefined;
@@ -23,7 +23,7 @@ function MainTabs() {
     <Tab.Navigator screenOptions={{ headerShown: false }}>
       <Tab.Screen name="Schedule" component={ScheduleScreen} />
       <Tab.Screen name="Map" component={MapScreen} />
-      <Tab.Screen name="Profile" component={ProfileScreen} />
+      <Tab.Screen name="Profile" component={PassengerProfileScreen} />
     </Tab.Navigator>
   );
 }

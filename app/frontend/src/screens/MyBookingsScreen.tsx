@@ -9,8 +9,8 @@ import {
   View,
   RefreshControl,
   Alert,
+  Image,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
 import AppHeader from "../components/AppHeader";
 import { getAuthToken } from "../services/authService";
 import {
@@ -37,7 +37,6 @@ const formatDateTime = (value?: string) => {
 };
 
 export default function MyBookingsScreen() {
-  const navigation = useNavigation<any>();
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -122,6 +121,16 @@ export default function MyBookingsScreen() {
     [reservations]
   );
 
+  const todayLabel = useMemo(() => {
+    const now = new Date();
+    return now.toLocaleDateString(undefined, {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    });
+  }, []);
+
   const onRefresh = () => {
     setRefreshing(true);
     loadReservations();
@@ -140,19 +149,7 @@ export default function MyBookingsScreen() {
 
         <View style={styles.welcomeWrap}>
           <Text style={styles.welcomeText}>WELCOME @USER!</Text>
-          <Text style={styles.dateText}>TODAY IS JANUARY 14, 2025(TUESDAY)</Text>
-        </View>
-
-        <View style={styles.actionsRow}>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.inactiveTab]}
-            onPress={() => navigation.navigate("MainTabs", { screen: "Schedule" })}
-          >
-            <Text style={styles.actionText}>VIEW SCHEDULE</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.actionButton, styles.activeTab]}>
-            <Text style={styles.actionText}>MY BOOKINGS</Text>
-          </TouchableOpacity>
+          <Text style={styles.dateText}>{todayLabel}</Text>
         </View>
 
         {loading ? (
@@ -162,10 +159,19 @@ export default function MyBookingsScreen() {
         ) : bookings.length === 0 ? (
           <Text style={styles.statusText}>No bookings found.</Text>
         ) : (
-          bookings.map((booking) => (
+          <View style={styles.sectionBlock}>
+            <Text style={styles.sectionTitle}>My Bookings</Text>
+            <View style={styles.cardList}>
+              {bookings.map((booking) => (
             <View key={booking.id} style={styles.card}>
               <View style={styles.cardRow}>
-                <View style={styles.circle} />
+                <View style={styles.circle}>
+                  <Image
+                    source={require("../../assets/routereserve-icon.png")}
+                    style={styles.circleIcon}
+                    resizeMode="contain"
+                  />
+                </View>
                 <View style={styles.cardBody}>
                   <Text style={styles.bookingTitle}>{booking.title}</Text>
                   <Text style={[styles.statusLabel, { color: statusColor(booking.status) }]}>
@@ -206,7 +212,9 @@ export default function MyBookingsScreen() {
                 </TouchableOpacity>
               </View>
             </View>
-          ))
+              ))}
+            </View>
+          </View>
         )}
       </ScrollView>
     </SafeAreaView>
@@ -216,71 +224,63 @@ export default function MyBookingsScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: "#f7f8fb",
   },
   scrollContent: {
     paddingHorizontal: 16,
     paddingTop: 0,
     paddingBottom: 32,
-    gap: 12,
+    gap: 16,
   },
   headerEdgeToEdge: {
     marginHorizontal: -16,
   },
   welcomeWrap: {
     gap: 2,
+    paddingVertical: 6,
   },
   welcomeText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "700",
-    color: "#000",
+    color: "#111827",
   },
   dateText: {
     fontSize: 12,
-    fontWeight: "700",
-    color: "#000",
-  },
-  actionsRow: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  actionButton: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: "#999",
-    borderRadius: 4,
-    height: 38,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#f8f8f8",
-  },
-  actionText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#000",
-  },
-  activeTab: {
-    backgroundColor: "#eaeaea",
-    borderColor: "#444",
-  },
-  inactiveTab: {
-    backgroundColor: "#f8f8f8",
-    borderColor: "#999",
+    fontWeight: "600",
+    color: "#4b5563",
   },
   statusText: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#444",
+    color: "#4b5563",
     textAlign: "center",
     marginTop: 8,
   },
+  sectionBlock: {
+    gap: 10,
+  },
+  sectionTitle: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: "#1f2937",
+    marginTop: 4,
+    marginBottom: 4,
+    textTransform: "uppercase",
+  },
+  cardList: {
+    gap: 10,
+  },
   card: {
     backgroundColor: "#fff",
-    borderRadius: 10,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#c4c4c4",
+    borderColor: "#e5e7eb",
     padding: 16,
     gap: 14,
+    shadowColor: "#000",
+    shadowOpacity: 0.04,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 3 },
   },
   cardRow: {
     flexDirection: "row",
@@ -291,56 +291,63 @@ const styles = StyleSheet.create({
     width: 52,
     borderRadius: 26,
     borderWidth: 1,
-    borderColor: "#7d7d7d",
-    backgroundColor: "#fff",
+    borderColor: "#d1d5db",
+    backgroundColor: "#f9fafb",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  circleIcon: {
+    height: 34,
+    width: 34,
   },
   cardBody: {
     flex: 1,
-    gap: 2,
+    gap: 6,
   },
   bookingTitle: {
     fontSize: 14,
     fontWeight: "800",
-    color: "#000",
+    color: "#111827",
   },
   statusLabel: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "800",
   },
   detailText: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: "700",
-    color: "#000",
+    color: "#111827",
   },
   cardActions: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    marginTop: 4,
   },
   cancelButton: {
     minWidth: 90,
     borderWidth: 1,
-    borderColor: "#666",
-    borderRadius: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    borderColor: "#d9d9d9",
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#f8f8f8",
+    backgroundColor: "#fff",
   },
   cancelText: {
     fontSize: 12,
-    fontWeight: "800",
-    color: "#000",
+    fontWeight: "700",
+    color: "#374151",
   },
   detailsButton: {
-    paddingVertical: 8,
+    paddingVertical: 10,
     paddingHorizontal: 12,
   },
   detailsText: {
     fontSize: 12,
     fontWeight: "800",
-    color: "#000",
+    color: "#1d4ed8",
   },
 });
 
