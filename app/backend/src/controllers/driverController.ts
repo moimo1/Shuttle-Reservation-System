@@ -10,7 +10,6 @@ export const getShuttleReservations = async (req: any, res: any) => {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    // Get the driver's assigned shuttles
     const driverShuttles = await Shuttle.find({ driver: userId }).select("_id");
     const shuttleIds = driverShuttles.map((s) => s._id);
 
@@ -18,7 +17,6 @@ export const getShuttleReservations = async (req: any, res: any) => {
       return res.json([]);
     }
 
-    // Get reservations for the driver's shuttles
     const reservations = await Reservation.find({
       status: "active",
       shuttle: { $in: shuttleIds },
@@ -57,7 +55,6 @@ export const getDriverHistory = async (req: any, res: any) => {
 
     const { date, destination, minPassengers } = req.query;
 
-    // Get the driver's assigned shuttles
     const driverShuttles = await Shuttle.find({ driver: userId }).select("_id");
     const shuttleIds = driverShuttles.map((s) => s._id);
 
@@ -65,7 +62,6 @@ export const getDriverHistory = async (req: any, res: any) => {
       return res.json([]);
     }
 
-    // Get all reservations (including past ones for history)
     let query: any = { 
       status: "active",
       shuttle: { $in: shuttleIds },
@@ -89,7 +85,6 @@ export const getDriverHistory = async (req: any, res: any) => {
       .populate("trip", "departureTime route direction")
       .sort({ createdAt: -1, seatNumber: 1 });
 
-    // Group reservations by trip and date
     const tripMap = new Map<string, any>();
 
     reservations.forEach((reservation: any) => {
@@ -122,7 +117,6 @@ export const getDriverHistory = async (req: any, res: any) => {
 
     let trips = Array.from(tripMap.values());
 
-    // Filter by minPassengers if provided
     if (minPassengers) {
       const min = parseInt(minPassengers, 10);
       if (!isNaN(min)) {
@@ -130,7 +124,6 @@ export const getDriverHistory = async (req: any, res: any) => {
       }
     }
 
-    // Sort by date (newest first)
     trips.sort((a, b) => b.date.localeCompare(a.date));
 
     res.json(trips);

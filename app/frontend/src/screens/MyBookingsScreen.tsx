@@ -25,10 +25,8 @@ const formatDateTime = (value?: string | null) => {
   }
   
   try {
-    // First, try to parse as a full date-time string
     const date = new Date(value);
     
-    // Check if date is valid by checking if getTime() returns a valid number
     if (!isNaN(date.getTime()) && date.toString() !== "Invalid Date") {
       // It's a valid date, format it
       const time = date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
@@ -121,7 +119,6 @@ export default function MyBookingsScreen() {
       reservations.map((r, idx) => {
         const shuttle = r.shuttle || {};
         const trip = r.trip || {};
-        // Get departure time from trip first, then fallback to shuttle
         const timeValue = 
           (trip as any).departureTime || 
           (shuttle as any).departureTime || 

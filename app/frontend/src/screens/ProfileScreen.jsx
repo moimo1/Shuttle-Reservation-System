@@ -36,7 +36,6 @@ export default function ProfileScreen() {
     refreshUserData();
   }, []);
 
-  // Refresh user data when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
       refreshUserData();
@@ -87,7 +86,7 @@ export default function ProfileScreen() {
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [1, 1],
-      quality: 0.6, // smaller payload to avoid UI jank on base64
+      quality: 0.6,
       base64: true,
     });
 
@@ -95,7 +94,6 @@ export default function ProfileScreen() {
 
     const asset = result.assets[0];
 
-    // guard against very large selections that can freeze the UI
     const estimatedBytes = asset.base64 ? asset.base64.length * (3 / 4) : 0;
     const maxBytes = 4 * 1024 * 1024; // 4MB
     if (estimatedBytes > maxBytes) {
@@ -119,7 +117,6 @@ export default function ProfileScreen() {
       const token = getAuthToken();
       const result = await uploadAvatarImage(imageBase64, token);
       if (result?.user) {
-        // Update local state - the user object is already updated in authService
         refreshUserData();
         setImageBase64("");
         Alert.alert("Success", "Profile picture updated successfully!");

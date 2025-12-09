@@ -37,7 +37,6 @@ export const scheduleReminder = async (req: any, res: any) => {
     const departureTime = new Date(today.setHours(hours, minutes, 0, 0));
     const scheduledFor = new Date(departureTime.getTime() - hoursBeforeDeparture * 60 * 60 * 1000);
 
-    // Create notification
     const shuttle = (reservation as any).shuttle;
     const notification = new Notification({
       user: userId,

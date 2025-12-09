@@ -107,7 +107,6 @@ export default function NotificationsScreen() {
     try {
       const token = getAuthToken();
       await markNotificationAsRead(notificationId, token);
-      // Update local state
       setNotifications((prev) =>
         prev.map((n) => (n._id === notificationId ? { ...n, isRead: true } : n))
       );

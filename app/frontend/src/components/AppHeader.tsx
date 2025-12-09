@@ -37,12 +37,10 @@ export default function AppHeader({ onNotifPress, unreadCount: propUnreadCount, 
 
   useEffect(() => {
     fetchUnread();
-    // Refresh every 30 seconds
     const interval = setInterval(fetchUnread, 30000);
     return () => clearInterval(interval);
   }, [fetchUnread]);
 
-  // Refresh when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
       if (autoFetchUnread) {

@@ -39,9 +39,8 @@ export const getShuttles = async (_req: any, res: any) => {
       const seatsAvailable = Math.max(0, capacity - takenSeats.length);
       const shuttle = t.shuttle as any;
       const driver = shuttle?.driver;
-      
-      // Ensure departureTime is included - it should always be present from Trip model
       const departureTime = t.departureTime;
+      
       if (!departureTime) {
         console.warn(`Trip ${tripId} is missing departureTime field`);
       }
@@ -77,7 +76,6 @@ export const reserveShuttle = async (req: any, res: any) => {
 
     const capacity = trip.seatsCapacity || (trip.shuttle as any)?.seatsCapacity || 20;
 
-    // Ensure seatNumber is parsed as an integer
     const parsedSeatNumber = parseInt(seatNumber, 10);
     if (isNaN(parsedSeatNumber) || parsedSeatNumber < 1 || parsedSeatNumber > capacity)
       return res.status(400).json({ message: "Invalid seat number" });
@@ -101,7 +99,6 @@ export const reserveShuttle = async (req: any, res: any) => {
         .status(400)
         .json({ message: "You already reserved a seat for this trip" });
 
-    // Check if user has an active reservation at the same departure time in a different trip
     const userActiveReservations = await Reservation.find({
       user: req.user.id,
       status: "active",
@@ -136,7 +133,6 @@ export const reserveShuttle = async (req: any, res: any) => {
 
     console.log(`Reservation created: seat ${reservation.seatNumber} for trip ${trip._id}`);
 
-    // Create confirmation notification
     try {
       const confirmationNotification = new Notification({
         user: req.user.id,
@@ -152,7 +148,6 @@ export const reserveShuttle = async (req: any, res: any) => {
       await confirmationNotification.save();
     } catch (notifError) {
       console.error("Error creating confirmation notification:", notifError);
-      // Don't fail the reservation if notification creation fails
     }
 
     const seatsAvailable = Math.max(0, capacity - (reservedCount + 1));

@@ -18,7 +18,6 @@ const reservationSchema = new mongoose.Schema({
   },
 });
 
-// Ensure a user can only have one active reservation per trip
 reservationSchema.index(
   { user: 1, trip: 1, status: 1 },
   { unique: true, partialFilterExpression: { status: "active" } }

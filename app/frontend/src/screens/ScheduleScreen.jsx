@@ -76,19 +76,17 @@ export default function ViewScheduleScreen() {
     }
     
     return shuttles.map((trip, idx) => {
-      // Backend returns trips with: _id, shuttle, shuttleName, driverName, departureTime, destination, direction, seatsAvailable, takenSeats
       const shuttleName = trip.shuttleName || "Shuttle";
       const direction = trip.direction === "reverse" ? " (Reverse)" : "";
       const departureTime = trip.departureTime;
       
-      // Log if departureTime is missing for debugging
       if (!departureTime) {
         console.warn(`Trip ${trip._id} is missing departureTime:`, trip);
       }
       
       return {
         id: trip._id || String(idx),
-        shuttleId: trip._id, // This is the trip ID, used for reservation
+        shuttleId: trip._id,
         tripId: trip._id,
         title: `${shuttleName} - Trip ${idx + 1}${direction}`,
         time: departureTime || "TBD",
@@ -147,7 +145,6 @@ export default function ViewScheduleScreen() {
     setSelectedSeat(null);
     setReserveMessage("");
     setConfirmVisible(false);
-    // Refresh shuttles to get latest seat availability
     try {
       const data = await fetchShuttles();
       setShuttles(data);
@@ -164,7 +161,6 @@ export default function ViewScheduleScreen() {
     }
     setReserveMessage("");
 
-    // Check for time conflicts before showing confirmation
     try {
       const token = getAuthToken();
       if (token) {
@@ -189,7 +185,6 @@ export default function ViewScheduleScreen() {
         }
       }
     } catch (err) {
-      // If we can't check reservations, continue with booking (backend will validate)
       console.log("Could not check for conflicts:", err);
     }
 
@@ -209,15 +204,12 @@ export default function ViewScheduleScreen() {
         token
       );
       setReserveMessage("Seat reserved!");
-      // Close both popups after success
       setConfirmVisible(false);
       setModalVisible(false);
       setSelectedTrip(null);
       setSelectedSeat(null);
-      // Refresh trips to reflect updated seats
       const data = await fetchShuttles();
       setShuttles(data);
-      // update selectedTrip taken seats
       const updated = data.find((t) => t._id === selectedTrip.tripId || t._id === selectedTrip.shuttleId);
       if (updated) {
         setSelectedTrip((prev) =>
@@ -234,7 +226,6 @@ export default function ViewScheduleScreen() {
     } catch (err) {
       const message = err?.message || "Reservation failed";
       setReserveMessage(message);
-      // Show an obvious popup and close both modals
       Alert.alert("Reservation Error", message, [{ text: "OK" }]);
       setConfirmVisible(false);
       setModalVisible(false);

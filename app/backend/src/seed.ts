@@ -12,7 +12,6 @@ dotenv.config();
 async function seed() {
   await connectDB();
 
-  // Clean existing data to make the seed deterministic
   await Promise.all([
     User.deleteMany({}),
     Shuttle.deleteMany({}),
@@ -32,47 +31,38 @@ async function seed() {
   const routeForward = "Maryheights Campus -> Holy Family Parish Church -> BGH -> SSS -> Main Campus";
   const routeReverse = "Main Campus -> SSS -> BGH -> Holy Family Parish Church -> Maryheights Campus";
 
-  // Assign drivers to shuttles (users[1] and users[3] are drivers)
   const shuttles = await Shuttle.insertMany([
-    { name: "Shuttle A", baseRoute: routeForward, seatsCapacity: 20, driver: users[1]._id }, // Liam Chen
-    { name: "Shuttle B", baseRoute: routeForward, seatsCapacity: 20, driver: users[3]._id }, // Noah Smith
-    { name: "Shuttle C", baseRoute: routeForward, seatsCapacity: 20, driver: users[1]._id }, // Liam Chen (can drive multiple)
+    { name: "Shuttle A", baseRoute: routeForward, seatsCapacity: 20, driver: users[1]._id },
+    { name: "Shuttle B", baseRoute: routeForward, seatsCapacity: 20, driver: users[3]._id },
+    { name: "Shuttle C", baseRoute: routeForward, seatsCapacity: 20, driver: users[1]._id },
   ]);
 
   const trips = await Trip.insertMany([
-    // Shuttle A - Forward trips (Morning/Afternoon)
     { shuttle: shuttles[0]._id, departureTime: "06:00", route: routeForward, direction: "forward", seatsCapacity: 20 },
     { shuttle: shuttles[0]._id, departureTime: "08:00", route: routeForward, direction: "forward", seatsCapacity: 20 },
     { shuttle: shuttles[0]._id, departureTime: "10:30", route: routeForward, direction: "forward", seatsCapacity: 20 },
     { shuttle: shuttles[0]._id, departureTime: "11:00", route: routeForward, direction: "forward", seatsCapacity: 20 },
     { shuttle: shuttles[0]._id, departureTime: "12:00", route: routeForward, direction: "forward", seatsCapacity: 20 },
-    // Shuttle A - Reverse trips (Afternoon/Evening)
     { shuttle: shuttles[0]._id, departureTime: "13:00", route: routeReverse, direction: "reverse", seatsCapacity: 20 },
     { shuttle: shuttles[0]._id, departureTime: "14:00", route: routeReverse, direction: "reverse", seatsCapacity: 20 },
     { shuttle: shuttles[0]._id, departureTime: "16:30", route: routeReverse, direction: "reverse", seatsCapacity: 20 },
     { shuttle: shuttles[0]._id, departureTime: "18:00", route: routeReverse, direction: "reverse", seatsCapacity: 20 },
     { shuttle: shuttles[0]._id, departureTime: "19:30", route: routeReverse, direction: "reverse", seatsCapacity: 20 },
-
-    // Shuttle B - Forward trips (Morning/Afternoon)
     { shuttle: shuttles[1]._id, departureTime: "06:30", route: routeForward, direction: "forward", seatsCapacity: 20 },
     { shuttle: shuttles[1]._id, departureTime: "08:30", route: routeForward, direction: "forward", seatsCapacity: 20 },
     { shuttle: shuttles[1]._id, departureTime: "09:30", route: routeForward, direction: "forward", seatsCapacity: 20 },
     { shuttle: shuttles[1]._id, departureTime: "11:30", route: routeForward, direction: "forward", seatsCapacity: 20 },
     { shuttle: shuttles[1]._id, departureTime: "13:30", route: routeForward, direction: "forward", seatsCapacity: 20 },
-    // Shuttle B - Reverse trips (Afternoon/Evening)
     { shuttle: shuttles[1]._id, departureTime: "14:30", route: routeReverse, direction: "reverse", seatsCapacity: 20 },
     { shuttle: shuttles[1]._id, departureTime: "15:00", route: routeReverse, direction: "reverse", seatsCapacity: 20 },
     { shuttle: shuttles[1]._id, departureTime: "17:30", route: routeReverse, direction: "reverse", seatsCapacity: 20 },
     { shuttle: shuttles[1]._id, departureTime: "18:30", route: routeReverse, direction: "reverse", seatsCapacity: 20 },
     { shuttle: shuttles[1]._id, departureTime: "20:00", route: routeReverse, direction: "reverse", seatsCapacity: 20 },
-
-    // Shuttle C - Forward trips (Morning/Afternoon)
     { shuttle: shuttles[2]._id, departureTime: "07:00", route: routeForward, direction: "forward", seatsCapacity: 20 },
     { shuttle: shuttles[2]._id, departureTime: "09:00", route: routeForward, direction: "forward", seatsCapacity: 20 },
     { shuttle: shuttles[2]._id, departureTime: "10:00", route: routeForward, direction: "forward", seatsCapacity: 20 },
     { shuttle: shuttles[2]._id, departureTime: "12:30", route: routeForward, direction: "forward", seatsCapacity: 20 },
     { shuttle: shuttles[2]._id, departureTime: "15:30", route: routeForward, direction: "forward", seatsCapacity: 20 },
-    // Shuttle C - Reverse trips (Afternoon/Evening)
     { shuttle: shuttles[2]._id, departureTime: "16:00", route: routeReverse, direction: "reverse", seatsCapacity: 20 },
     { shuttle: shuttles[2]._id, departureTime: "17:00", route: routeReverse, direction: "reverse", seatsCapacity: 20 },
     { shuttle: shuttles[2]._id, departureTime: "19:00", route: routeReverse, direction: "reverse", seatsCapacity: 20 },
@@ -115,11 +105,11 @@ async function seed() {
     },
   ]);
 
-  console.log("✅ Seed complete. Created users, shuttles, reservations.");
+  console.log("Seed complete. Created users, shuttles, reservations.");
   await mongoose.connection.close();
 }
 
 seed().catch((err) => {
-  console.error("❌ Seed failed:", err);
+  console.error("Seed failed:", err);
   mongoose.connection.close().finally(() => process.exit(1));
 });

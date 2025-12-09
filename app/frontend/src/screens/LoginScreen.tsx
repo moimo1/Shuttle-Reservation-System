@@ -16,7 +16,7 @@ export default function LoginScreen() {
   const [selectedRole, setSelectedRole] = useState<"driver" | "passenger">("passenger");
   const [error, setError] = useState("");
 
-  const navigation = useNavigation<NavigationProp<RootStackParamList>>();  // Get the navigation object from the hook
+  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
 
   const handleLogin = async () => {
     if (!email || !password) {
