@@ -12,11 +12,13 @@ import {
   View,
   Alert,
 } from "react-native";
+import { useNavigation } from "@react-navigation/native";
 import AppHeader from "../components/AppHeader";
 import { fetchShuttles, reserveSeat } from "../services/shuttleService";
 import { getAuthToken } from "../services/authService";
 
 export default function ViewScheduleScreen() {
+  const navigation = useNavigation();
   const [shuttles, setShuttles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -182,10 +184,13 @@ export default function ViewScheduleScreen() {
         </View>
 
         <View style={styles.actionsRow}>
-          <TouchableOpacity style={styles.actionButton}>
+          <TouchableOpacity style={[styles.actionButton, styles.activeTab]}>
             <Text style={styles.actionText}>VIEW SCHEDULE</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton}>
+          <TouchableOpacity
+            style={[styles.actionButton, styles.inactiveTab]}
+            onPress={() => navigation.navigate("MyBookings")}
+          >
             <Text style={styles.actionText}>MY BOOKINGS</Text>
           </TouchableOpacity>
         </View>
@@ -432,6 +437,14 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
     color: "#000",
+  },
+  activeTab: {
+    backgroundColor: "#eaeaea",
+    borderColor: "#444",
+  },
+  inactiveTab: {
+    backgroundColor: "#f8f8f8",
+    borderColor: "#999",
   },
   searchBar: {
     flexDirection: "row",

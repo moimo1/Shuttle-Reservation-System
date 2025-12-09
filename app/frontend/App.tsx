@@ -9,6 +9,7 @@ import RegisterScreen from "./src/screens/RegisterScreen";
 import ScheduleScreen from "./src/screens/ScheduleScreen";
 import MapScreen from "./src/screens/MapScreen";
 import ProfileScreen from "./src/screens/ProfileScreen";
+import MyBookingsScreen from "./src/screens/MyBookingsScreen";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -34,6 +35,7 @@ export default function App() {
 
         {/* Bottom navbar after login */}
         <Stack.Screen name="MainTabs" component={MainTabs} />
+        <Stack.Screen name="MyBookings" component={MyBookingsScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
