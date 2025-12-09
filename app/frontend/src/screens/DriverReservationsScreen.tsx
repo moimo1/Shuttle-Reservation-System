@@ -14,7 +14,7 @@ import {
 } from "react-native";
 import AppHeader from "../components/AppHeader";
 import { fetchDriverReservations, DriverReservation } from "../services/driverService";
-import { getAuthToken } from "../services/authService";
+import { getAuthToken, getCurrentUser } from "../services/authService";
 
 type DriverTrip = {
   key: string;
@@ -88,6 +88,11 @@ export default function DriverReservationsScreen() {
   );
   const [destinationFilter, setDestinationFilter] = useState("");
   const [presence, setPresence] = useState<Record<string, "present" | "absent">>({});
+  const displayName = useMemo(() => {
+    const user = getCurrentUser();
+    const name = user?.name || "Driver";
+    return name.toUpperCase();
+  }, []);
 
   const todayLabel = useMemo(() => {
     const now = new Date();
@@ -198,10 +203,10 @@ export default function DriverReservationsScreen() {
     const capacity = trip.capacity || 20;
     const title =
       trip.status === "ongoing"
-        ? "ONGOING TRIP"
+        ? "ONGOING"
         : trip.status === "upcoming"
-        ? "UPCOMING TRIP"
-        : "COMPLETED TRIP";
+        ? "UPCOMING"
+        : "COMPLETED";
 
     return (
       <TouchableOpacity
@@ -218,19 +223,36 @@ export default function DriverReservationsScreen() {
         activeOpacity={0.92}
       >
         <View style={styles.cardHeaderRow}>
-          <Text style={styles.tripTitle}>{title}</Text>
-          <Text style={styles.timeText}>{trip.time}</Text>
+          <View style={styles.statusPill}>
+            <Text style={styles.statusPillText}>{title}</Text>
+          </View>
+          <View style={styles.timePill}>
+            <Text style={styles.timeText}>{trip.time}</Text>
+          </View>
         </View>
-        <Text style={styles.detailText}>Route: {trip.route}</Text>
-        <Text style={styles.detailText}>
-          Passengers Booked: {passengerCount} / {capacity}
-        </Text>
-        {trip.status !== "completed" ? (
-          <Text style={styles.subtleText}>
-            {trip.eta || "Ready"} {trip.remainingStops ? `• Remaining Stops: ${trip.remainingStops}` : ""}
+
+        <View style={styles.routeRow}>
+          <Text style={styles.detailText}>{trip.route}</Text>
+        </View>
+        <View style={styles.metaRow}>
+          <Text style={styles.metaLabel}>Passengers</Text>
+          <Text style={styles.metaValue}>
+            {passengerCount} / {capacity}
           </Text>
+        </View>
+        {trip.status !== "completed" ? (
+          <View style={styles.metaRow}>
+            <Text style={styles.metaLabel}>ETA</Text>
+            <Text style={styles.metaValue}>
+              {trip.eta || "Ready"}
+              {trip.remainingStops ? ` • ${trip.remainingStops} stops` : ""}
+            </Text>
+          </View>
         ) : (
-          <Text style={styles.subtleText}>{trip.dateLabel || "Today"}</Text>
+          <View style={styles.metaRow}>
+            <Text style={styles.metaLabel}>Date</Text>
+            <Text style={styles.metaValue}>{trip.dateLabel || "Today"}</Text>
+          </View>
         )}
 
         <View style={styles.cardActions}>
@@ -242,10 +264,10 @@ export default function DriverReservationsScreen() {
           </TouchableOpacity>
           {trip.status === "ongoing" && (
             <TouchableOpacity
-              style={styles.linkButton}
+              style={[styles.linkButton, styles.linkEmphasis]}
               onPress={() => handleOpenModal("passengers", trip)}
             >
-              <Text style={styles.linkText}>Passenger List</Text>
+              <Text style={[styles.linkText, styles.linkEmphasisText]}>Passenger List</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -323,7 +345,7 @@ export default function DriverReservationsScreen() {
         </View>
 
         <View style={styles.welcomeWrap}>
-          <Text style={styles.welcomeText}>WELCOME @DRIVER!</Text>
+          <Text style={styles.welcomeText}>WELCOME {displayName}!</Text>
           <Text style={styles.dateText}>{todayLabel}</Text>
         </View>
 
@@ -375,20 +397,32 @@ export default function DriverReservationsScreen() {
         {!error && loading ? <Text style={styles.statusText}>Loading reservations...</Text> : null}
         {showEmpty ? <Text style={styles.statusText}>{showEmpty}</Text> : null}
 
-        <Text style={styles.sectionTitle}>Ongoing Trip</Text>
-        {normalizedTrips
-          .filter((t) => t.status === "ongoing")
-          .map((trip) => renderTripCard(trip))}
+        <View style={styles.sectionBlock}>
+          <Text style={styles.sectionTitle}>Ongoing Trip</Text>
+          <View style={styles.cardList}>
+            {normalizedTrips
+              .filter((t) => t.status === "ongoing")
+              .map((trip) => renderTripCard(trip))}
+          </View>
+        </View>
 
-        <Text style={styles.sectionTitle}>Upcoming Trips</Text>
-        {normalizedTrips
-          .filter((t) => t.status === "upcoming")
-          .map((trip) => renderTripCard(trip))}
+        <View style={styles.sectionBlock}>
+          <Text style={styles.sectionTitle}>Upcoming Trips</Text>
+          <View style={styles.cardList}>
+            {normalizedTrips
+              .filter((t) => t.status === "upcoming")
+              .map((trip) => renderTripCard(trip))}
+          </View>
+        </View>
 
-        <Text style={styles.sectionTitle}>Completed Trips</Text>
-        {normalizedTrips
-          .filter((t) => t.status === "completed")
-          .map((trip) => renderTripCard(trip))}
+        <View style={styles.sectionBlock}>
+          <Text style={styles.sectionTitle}>Completed Trips</Text>
+          <View style={styles.cardList}>
+            {normalizedTrips
+              .filter((t) => t.status === "completed")
+              .map((trip) => renderTripCard(trip))}
+          </View>
+        </View>
       </ScrollView>
 
       <Modal
@@ -476,30 +510,30 @@ export default function DriverReservationsScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#f5f6fb",
+    backgroundColor: "#f7f8fb",
   },
   scrollContent: {
     paddingHorizontal: 16,
     paddingTop: 0,
     paddingBottom: 32,
-    gap: 12,
+    gap: 16,
   },
   headerEdgeToEdge: {
     marginHorizontal: -16,
   },
   welcomeWrap: {
-    gap: 4,
-    paddingVertical: 4,
+    gap: 2,
+    paddingVertical: 6,
   },
   welcomeText: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: "#0a0a0a",
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#111827",
   },
   dateText: {
     fontSize: 12,
-    fontWeight: "700",
-    color: "#1f2c60",
+    fontWeight: "600",
+    color: "#4b5563",
   },
   actionsRow: {
     flexDirection: "row",
@@ -510,7 +544,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 44,
     borderRadius: 10,
-    backgroundColor: "#0f1e6b",
+    backgroundColor: "#1d4ed8",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -520,7 +554,7 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     color: "#fff",
     fontSize: 13,
-    fontWeight: "800",
+    fontWeight: "700",
   },
   secondaryButton: {
     flex: 1,
@@ -536,7 +570,7 @@ const styles = StyleSheet.create({
   secondaryText: {
     color: "#0f1e6b",
     fontSize: 12,
-    fontWeight: "800",
+    fontWeight: "700",
     textAlign: "center",
   },
   secondaryGhostButton: {
@@ -551,23 +585,29 @@ const styles = StyleSheet.create({
   },
   secondaryGhostText: {
     fontSize: 12,
-    fontWeight: "800",
-    color: "#333",
+    fontWeight: "700",
+    color: "#374151",
   },
   statusText: {
     fontSize: 12,
-    fontWeight: "700",
-    color: "#4a4a4a",
+    fontWeight: "600",
+    color: "#4b5563",
     textAlign: "center",
     marginTop: 8,
+  },
+  sectionBlock: {
+    gap: 10,
   },
   sectionTitle: {
     fontSize: 13,
     fontWeight: "800",
-    color: "#102478",
-    marginTop: 6,
-    marginBottom: 2,
+    color: "#1f2937",
+    marginTop: 4,
+    marginBottom: 4,
     textTransform: "uppercase",
+  },
+  cardList: {
+    gap: 10,
   },
   tripCard: {
     backgroundColor: "#fff",
@@ -575,10 +615,10 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 6,
     borderWidth: 1,
-    borderColor: "#e3e7ff",
+    borderColor: "#e5e7eb",
     shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
+    shadowOpacity: 0.04,
+    shadowRadius: 5,
     shadowOffset: { width: 0, height: 3 },
   },
   cardOngoing: {
@@ -595,25 +635,63 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
+  statusPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: "#1d4ed8",
+    borderRadius: 8,
+  },
+  statusPillText: {
+    color: "#fff",
+    fontWeight: "900",
+    fontSize: 11,
+    letterSpacing: 0.2,
+  },
+  timePill: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: "#eef1ff",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#cdd4ff",
+  },
   tripTitle: {
     fontSize: 14,
-    fontWeight: "900",
-    color: "#0f7d2a",
+    fontWeight: "800",
+    color: "#111827",
   },
   timeText: {
     fontSize: 12,
-    fontWeight: "800",
-    color: "#0a0a0a",
+    fontWeight: "700",
+    color: "#111827",
   },
   detailText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "700",
-    color: "#0a0a0a",
+    color: "#111827",
   },
   subtleText: {
     fontSize: 11,
+    fontWeight: "600",
+    color: "#6b7280",
+  },
+  routeRow: {
+    marginTop: 4,
+  },
+  metaRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: 3,
+  },
+  metaLabel: {
+    fontSize: 11,
     fontWeight: "700",
-    color: "#666",
+    color: "#6b7280",
+  },
+  metaValue: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#111827",
   },
   cardActions: {
     flexDirection: "row",
@@ -626,8 +704,16 @@ const styles = StyleSheet.create({
   },
   linkText: {
     fontSize: 12,
-    fontWeight: "900",
-    color: "#0f1e6b",
+    fontWeight: "800",
+    color: "#1d4ed8",
+  },
+  linkEmphasis: {
+    backgroundColor: "#0f1e6b",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+  },
+  linkEmphasisText: {
+    color: "#fff",
   },
   modalBackdrop: {
     flex: 1,
@@ -650,6 +736,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+  },
+  modalActions: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 10,
+    marginTop: 14,
   },
   modalTitle: {
     fontSize: 15,
@@ -675,17 +767,21 @@ const styles = StyleSheet.create({
   passengerGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 10,
-    marginTop: 4,
+    gap: 12,
+    marginTop: 8,
   },
   seatCard: {
     width: "48%",
     backgroundColor: "#f8f9ff",
-    borderRadius: 10,
-    padding: 10,
+    borderRadius: 12,
+    padding: 12,
     borderWidth: 1,
-    borderColor: "#e4e7ff",
-    gap: 4,
+    borderColor: "#dfe4ff",
+    gap: 6,
+    shadowColor: "#000",
+    shadowOpacity: 0.03,
+    shadowRadius: 3,
+    shadowOffset: { width: 0, height: 2 },
   },
   seatLabel: {
     fontSize: 11,
@@ -694,13 +790,13 @@ const styles = StyleSheet.create({
   },
   passengerName: {
     fontSize: 12,
-    fontWeight: "800",
-    color: "#000",
+    fontWeight: "700",
+    color: "#111827",
   },
   passengerDest: {
     fontSize: 11,
-    fontWeight: "700",
-    color: "#444",
+    fontWeight: "600",
+    color: "#4b5563",
   },
   availableText: {
     fontSize: 12,
@@ -710,6 +806,7 @@ const styles = StyleSheet.create({
   presencePills: {
     flexDirection: "row",
     gap: 6,
+    marginTop: 2,
   },
   presencePill: {
     borderWidth: 1,

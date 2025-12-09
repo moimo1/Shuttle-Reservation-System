@@ -10,6 +10,7 @@ import {
   View,
 } from "react-native";
 import AppHeader from "../components/AppHeader";
+import { getCurrentUser } from "../services/authService";
 
 type Passenger = {
   name: string;
@@ -55,6 +56,11 @@ export default function DriverHistoryScreen() {
   const [destinationFilter, setDestinationFilter] = useState("");
   const [minPassengers, setMinPassengers] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const displayName = useMemo(() => {
+    const user = getCurrentUser();
+    const name = user?.name || "Driver";
+    return name.toUpperCase();
+  }, []);
 
   const filteredHistory = useMemo(() => {
     return MOCK_HISTORY.filter((trip) => {
@@ -90,7 +96,7 @@ export default function DriverHistoryScreen() {
         </View>
 
         <View style={styles.welcomeWrap}>
-          <Text style={styles.welcomeText}>WELCOME @DRIVER!</Text>
+          <Text style={styles.welcomeText}>WELCOME {displayName}!</Text>
           <Text style={styles.dateText}>DRIVING HISTORY</Text>
         </View>
 
@@ -142,55 +148,55 @@ export default function DriverHistoryScreen() {
           />
         </View>
 
-        {filteredHistory.map((trip) => {
-          const expanded = expandedId === trip.id;
-          return (
-            <View key={trip.id} style={styles.tripCard}>
-              <View style={styles.tripHeader}>
-                <View>
-                  <Text style={styles.tripTitle}>{trip.route}</Text>
-                  <Text style={styles.detailText}>
-                    {trip.date} • {trip.time}
-                  </Text>
+        <View style={styles.sectionBlock}>
+          {filteredHistory.map((trip) => {
+            const expanded = expandedId === trip.id;
+            return (
+              <View key={trip.id} style={styles.tripCard}>
+                <View style={styles.tripHeader}>
+                  <View style={styles.datePill}>
+                    <Text style={styles.datePillText}>{trip.date}</Text>
+                  </View>
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>{trip.passengerCount} pax</Text>
+                  </View>
                 </View>
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>{trip.passengerCount} pax</Text>
+
+                <Text style={styles.tripTitle}>{trip.route}</Text>
+                <Text style={styles.detailText}>{trip.time}</Text>
+
+                <View style={styles.divider} />
+
+                <View style={styles.tripMetaRow}>
+                  <Text style={styles.metaLabel}>Route</Text>
+                  <Text style={styles.metaValue}>{trip.route}</Text>
                 </View>
-              </View>
-
-              <View style={styles.tripMetaRow}>
-                <Text style={styles.metaLabel}>Date</Text>
-                <Text style={styles.metaValue}>{trip.date}</Text>
-              </View>
-              <View style={styles.tripMetaRow}>
-                <Text style={styles.metaLabel}>Time</Text>
-                <Text style={styles.metaValue}>{trip.time}</Text>
-              </View>
-              <View style={styles.tripMetaRow}>
-                <Text style={styles.metaLabel}>Route</Text>
-                <Text style={styles.metaValue}>{trip.route}</Text>
-              </View>
-
-              <TouchableOpacity
-                style={styles.togglePassengers}
-                onPress={() => setExpandedId(expanded ? null : trip.id)}
-              >
-                <Text style={styles.toggleText}>{expanded ? "Hide" : "View"} passengers</Text>
-              </TouchableOpacity>
-
-              {expanded ? (
-                <View style={styles.passengerList}>
-                  {trip.passengers.map((p, idx) => (
-                    <View key={`${p.name}-${idx}`} style={styles.passengerRow}>
-                      <Text style={styles.passengerName}>{p.name}</Text>
-                      <Text style={styles.passengerDest}>{p.destination}</Text>
-                    </View>
-                  ))}
+                <View style={styles.tripMetaRow}>
+                  <Text style={styles.metaLabel}>Passengers</Text>
+                  <Text style={styles.metaValue}>{trip.passengerCount}</Text>
                 </View>
-              ) : null}
-            </View>
-          );
-        })}
+
+                <TouchableOpacity
+                  style={styles.togglePassengers}
+                  onPress={() => setExpandedId(expanded ? null : trip.id)}
+                >
+                  <Text style={styles.toggleText}>{expanded ? "Hide" : "View"} passengers</Text>
+                </TouchableOpacity>
+
+                {expanded ? (
+                  <View style={styles.passengerList}>
+                    {trip.passengers.map((p, idx) => (
+                      <View key={`${p.name}-${idx}`} style={styles.passengerRow}>
+                        <Text style={styles.passengerName}>{p.name}</Text>
+                        <Text style={styles.passengerDest}>{p.destination}</Text>
+                      </View>
+                    ))}
+                  </View>
+                ) : null}
+              </View>
+            );
+          })}
+        </View>
 
         {filteredHistory.length === 0 ? (
           <Text style={styles.statusText}>No trips match your filters.</Text>
@@ -203,29 +209,30 @@ export default function DriverHistoryScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#f5f6fb",
+    backgroundColor: "#f7f8fb",
   },
   scrollContent: {
     paddingHorizontal: 16,
     paddingTop: 0,
     paddingBottom: 32,
-    gap: 12,
+    gap: 16,
   },
   headerEdgeToEdge: {
     marginHorizontal: -16,
   },
   welcomeWrap: {
-    gap: 4,
+    gap: 2,
+    paddingVertical: 4,
   },
   welcomeText: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: "#0a0a0a",
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#111827",
   },
   dateText: {
     fontSize: 12,
-    fontWeight: "700",
-    color: "#1f2c60",
+    fontWeight: "600",
+    color: "#4b5563",
   },
   kpiRow: {
     flexDirection: "row",
@@ -237,24 +244,24 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 12,
     borderWidth: 1,
-    borderColor: "#e0e6ff",
+    borderColor: "#e5e7eb",
   },
   kpiLabel: {
     fontSize: 11,
-    fontWeight: "800",
+    fontWeight: "700",
     color: "#6b7280",
   },
   kpiValue: {
     fontSize: 18,
-    fontWeight: "900",
-    color: "#0f1e6b",
+    fontWeight: "800",
+    color: "#1d4ed8",
   },
   filterCard: {
     backgroundColor: "#fff",
     padding: 12,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#e0e6ff",
+    borderColor: "#e5e7eb",
     gap: 8,
     shadowColor: "#000",
     shadowOpacity: 0.04,
@@ -268,13 +275,13 @@ const styles = StyleSheet.create({
   },
   filterLabel: {
     fontSize: 12,
-    fontWeight: "900",
-    color: "#000",
+    fontWeight: "800",
+    color: "#111827",
   },
   clearText: {
     fontSize: 11,
-    fontWeight: "800",
-    color: "#0f1e6b",
+    fontWeight: "700",
+    color: "#1d4ed8",
   },
   filterInput: {
     height: 44,
@@ -292,7 +299,7 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 8,
     borderWidth: 1,
-    borderColor: "#e3e7ff",
+    borderColor: "#e5e7eb",
     shadowColor: "#000",
     shadowOpacity: 0.05,
     shadowRadius: 6,
@@ -311,18 +318,18 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     color: "#fff",
-    fontWeight: "900",
+    fontWeight: "800",
     fontSize: 11,
   },
   tripTitle: {
     fontSize: 14,
-    fontWeight: "900",
-    color: "#0f7d2a",
+    fontWeight: "800",
+    color: "#111827",
   },
   detailText: {
     fontSize: 12,
     fontWeight: "700",
-    color: "#0a0a0a",
+    color: "#111827",
   },
   tripMetaRow: {
     flexDirection: "row",
@@ -331,13 +338,13 @@ const styles = StyleSheet.create({
   },
   metaLabel: {
     fontSize: 11,
-    fontWeight: "800",
+    fontWeight: "700",
     color: "#6b7280",
   },
   metaValue: {
     fontSize: 12,
-    fontWeight: "800",
-    color: "#0a0a0a",
+    fontWeight: "700",
+    color: "#111827",
   },
   togglePassengers: {
     marginTop: 6,
@@ -350,8 +357,8 @@ const styles = StyleSheet.create({
   },
   toggleText: {
     fontSize: 12,
-    fontWeight: "900",
-    color: "#0f1e6b",
+    fontWeight: "800",
+    color: "#1d4ed8",
   },
   passengerList: {
     backgroundColor: "#f8f9ff",
@@ -368,19 +375,40 @@ const styles = StyleSheet.create({
   },
   passengerName: {
     fontSize: 12,
-    fontWeight: "800",
-    color: "#000",
+    fontWeight: "700",
+    color: "#111827",
   },
   passengerDest: {
     fontSize: 11,
-    fontWeight: "700",
-    color: "#444",
+    fontWeight: "600",
+    color: "#4b5563",
   },
   statusText: {
     fontSize: 12,
-    fontWeight: "700",
-    color: "#444",
+    fontWeight: "600",
+    color: "#4b5563",
     textAlign: "center",
     marginTop: 12,
+  },
+  sectionBlock: {
+    gap: 12,
+  },
+  datePill: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+    backgroundColor: "#eef1ff",
+    borderWidth: 1,
+    borderColor: "#cdd4ff",
+  },
+  datePillText: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: "#0f1e6b",
+  },
+  divider: {
+    height: 1,
+    backgroundColor: "#eceff5",
+    marginVertical: 8,
   },
 });
