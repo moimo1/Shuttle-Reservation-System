@@ -34,4 +34,66 @@ export const getShuttleReservations = async (req, res) => {
         res.status(500).json({ message: "Server error" });
     }
 };
+export const getDriverHistory = async (req, res) => {
+    try {
+        const { date, destination, minPassengers } = req.query;
+        // Get all reservations (including past ones for history)
+        let query = { status: "active" };
+        if (date) {
+            const startDate = new Date(date);
+            startDate.setHours(0, 0, 0, 0);
+            const endDate = new Date(date);
+            endDate.setHours(23, 59, 59, 999);
+            query.createdAt = { $gte: startDate, $lte: endDate };
+        }
+        if (destination) {
+            query.destination = { $regex: destination, $options: "i" };
+        }
+        const reservations = await Reservation.find(query)
+            .populate("user", "name email")
+            .populate("shuttle", "name departureTime")
+            .sort({ createdAt: -1, seatNumber: 1 });
+        // Group reservations by shuttle and date
+        const tripMap = new Map();
+        reservations.forEach((reservation) => {
+            const shuttle = reservation.shuttle;
+            if (!shuttle)
+                return;
+            const reservationDate = new Date(reservation.createdAt);
+            const dateKey = reservationDate.toISOString().split("T")[0];
+            const tripKey = `${shuttle._id}-${dateKey}`;
+            if (!tripMap.has(tripKey)) {
+                tripMap.set(tripKey, {
+                    id: tripKey,
+                    date: dateKey,
+                    time: shuttle.departureTime,
+                    route: shuttle.name,
+                    passengerCount: 0,
+                    passengers: [],
+                });
+            }
+            const trip = tripMap.get(tripKey);
+            trip.passengerCount++;
+            trip.passengers.push({
+                name: reservation.user.name,
+                destination: reservation.destination,
+            });
+        });
+        let trips = Array.from(tripMap.values());
+        // Filter by minPassengers if provided
+        if (minPassengers) {
+            const min = parseInt(minPassengers, 10);
+            if (!isNaN(min)) {
+                trips = trips.filter((trip) => trip.passengerCount >= min);
+            }
+        }
+        // Sort by date (newest first)
+        trips.sort((a, b) => b.date.localeCompare(a.date));
+        res.json(trips);
+    }
+    catch (err) {
+        console.error("Error fetching driver history:", err);
+        res.status(500).json({ message: "Server error" });
+    }
+};
 //# sourceMappingURL=driverController.js.map
