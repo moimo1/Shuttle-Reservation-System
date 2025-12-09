@@ -1,5 +1,5 @@
 const API_BASE_URL = __DEV__ 
-  ? "http://192.168.1.2:5000/api"  
+  ? "http://192.168.2.9:5000/api"  
   : "http://localhost:5000/api";    
 
 let authToken: string | null = null;
@@ -31,6 +31,26 @@ export const updateAvatar = async (avatarUrl: string, token?: string | null) => 
   const data = await response.json();
   if (!response.ok) {
     throw new Error(data?.message || "Failed to update avatar");
+  }
+
+  if (data?.user) setCurrentUser(data.user);
+  return data;
+};
+
+export const uploadAvatarImage = async (imageBase64: string, token?: string | null) => {
+  const auth = token || authToken;
+  const response = await fetch(`${API_BASE_URL}/auth/avatar/upload`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(auth ? { Authorization: `Bearer ${auth}` } : {}),
+    },
+    body: JSON.stringify({ imageBase64 }),
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data?.message || "Failed to upload avatar image");
   }
 
   if (data?.user) setCurrentUser(data.user);
