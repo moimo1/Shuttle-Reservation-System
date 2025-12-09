@@ -17,6 +17,7 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [role, setRole] = useState<"driver" | "passenger">("passenger");
   const [error, setError] = useState("");
 
   const handleRegister = async () => {
@@ -27,7 +28,7 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
 
     setError("");
     try {
-      await register(name, email, password);
+      await register(name, email, password, role);
       navigation.navigate('Login');
     } catch (err: any) {
       setError(err.message || "Registration failed. Please try again.");
@@ -67,6 +68,26 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
         secureTextEntry
       />
 
+      <Text style={styles.label}>Registering as</Text>
+      <View style={styles.roleContainer}>
+        <TouchableOpacity
+          style={[styles.roleOption, role === "passenger" && styles.roleOptionSelected]}
+          onPress={() => setRole("passenger")}
+        >
+          <Text style={[styles.roleText, role === "passenger" && styles.roleTextSelected]}>
+            Passenger
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.roleOption, role === "driver" && styles.roleOptionSelected]}
+          onPress={() => setRole("driver")}
+        >
+          <Text style={[styles.roleText, role === "driver" && styles.roleTextSelected]}>
+            Driver
+          </Text>
+        </TouchableOpacity>
+      </View>
+
       <TouchableOpacity style={styles.button} onPress={handleRegister}>
         <Text style={styles.buttonText}>Register</Text>
       </TouchableOpacity>
@@ -104,6 +125,38 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     marginBottom: 20,
     fontSize: 16,
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: "500",
+    marginBottom: 8,
+  },
+  roleContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 20,
+  },
+  roleOption: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 10,
+    paddingVertical: 12,
+    marginHorizontal: 5,
+    alignItems: "center",
+    backgroundColor: "#f5f5f5",
+  },
+  roleOptionSelected: {
+    borderColor: "#4A90E2",
+    backgroundColor: "#E6F1FB",
+  },
+  roleText: {
+    fontSize: 16,
+    color: "#555",
+  },
+  roleTextSelected: {
+    color: "#4A90E2",
+    fontWeight: "600",
   },
   button: {
     backgroundColor: "#4A90E2",
