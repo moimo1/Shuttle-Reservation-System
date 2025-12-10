@@ -82,6 +82,17 @@ fi
 cd ../..
 echo "Database seeded ✓"
 
+# Get local IP for multi-user setup
+echo ""
+echo "Finding local IP address..."
+LOCAL_IP=$(hostname -I | awk '{print $1}' 2>/dev/null || ip route get 1.1.1.1 | awk '{print $7; exit}' 2>/dev/null || echo "")
+if [ -n "$LOCAL_IP" ]; then
+    echo "Your local IP: $LOCAL_IP"
+    echo "For multi-user access, update app/frontend/src/config/api.ts with this IP"
+else
+    echo "Could not detect local IP. Check manually with: ifconfig or ip addr"
+fi
+
 # Display demo credentials
 echo ""
 echo "=== Demo Login Credentials ==="

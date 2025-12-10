@@ -3,7 +3,8 @@
     "start": "cd app/backend && npm run dev",
     "start:backend": "cd app/backend && npm run dev",
     "start:frontend": "cd app/frontend && npm start",
-    "build:backend": "cd app/backend && npm run build"
+    "build:backend": "cd app/backend && npm run build",
+    "get-ip": "node get-local-ip.js"
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",

@@ -74,6 +74,17 @@ if ($LASTEXITCODE -ne 0) {
 Set-Location ..\..
 Write-Host "Database seeded ✓" -ForegroundColor Green
 
+# Get local IP for multi-user setup
+Write-Host ""
+Write-Host "Finding local IP address..." -ForegroundColor Yellow
+$localIP = (Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -like "192.168.*" -or $_.IPAddress -like "10.*" -or $_.IPAddress -like "172.*" } | Select-Object -First 1).IPAddress
+if ($localIP) {
+    Write-Host "Your local IP: $localIP" -ForegroundColor Green
+    Write-Host "For multi-user access, update app/frontend/src/config/api.ts with this IP" -ForegroundColor Yellow
+} else {
+    Write-Host "Could not detect local IP. Check manually with: ipconfig" -ForegroundColor Yellow
+}
+
 # Display demo credentials
 Write-Host ""
 Write-Host "=== Demo Login Credentials ===" -ForegroundColor Cyan
