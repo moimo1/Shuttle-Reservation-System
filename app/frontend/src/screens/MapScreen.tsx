@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import MapView, { Callout, Marker, PROVIDER_GOOGLE, Region } from 'react-native-maps';
+import MapView, { Callout, Marker, Region } from 'react-native-maps';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { markers } from '../../assets/markers';
@@ -57,9 +57,8 @@ export default function App() {
 			<MapView
 				style={StyleSheet.absoluteFillObject}
 				initialRegion={INITIAL_REGION}
-				showsUserLocation
-				showsMyLocationButton
-				provider={PROVIDER_GOOGLE}
+				showsUserLocation={false}
+				showsMyLocationButton={false}
 				ref={mapRef}
 				onRegionChangeComplete={onRegionChange}
 			>
