@@ -6,7 +6,7 @@
 
 // Change this to your computer's local IP address for network access
 // Leave as localhost if only testing on the same machine
-const LOCAL_IP = "10.148.70.212"; // TODO: Update this with your local IP address
+const LOCAL_IP = "10.148.70.212";
 
 export const API_BASE_URL = __DEV__
   ? `http://${LOCAL_IP}:5000/api`
