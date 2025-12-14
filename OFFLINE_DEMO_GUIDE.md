@@ -245,10 +245,49 @@ trap "kill $BACKEND_PID" EXIT
 
 ### MongoDB Connection Issues
 
-**Error: "MongoServerError: connect ECONNREFUSED"**
-- Make sure MongoDB is running: `mongosh` should connect
-- Check if port 27017 is not blocked by firewall
-- Verify `.env` has `MONGO_URI=mongodb://localhost:27017/shuttle-reservation`
+**Error: "MongoServerError: connect ECONNREFUSED" or "connect ECONNREFUSED 127.0.0.1:27017"**
+
+This means MongoDB is not running. Try these steps:
+
+1. **Check if MongoDB service exists:**
+   ```powershell
+   Get-Service -Name MongoDB
+   ```
+
+2. **Start MongoDB service (Windows):**
+   ```powershell
+   # Use the helper script
+   .\start-mongodb.ps1
+   
+   # Or manually
+   net start MongoDB
+   # or
+   Start-Service MongoDB
+   ```
+
+3. **If MongoDB service doesn't exist:**
+   - MongoDB may not be installed
+   - Download and install from: https://www.mongodb.com/try/download/community
+   - During installation, make sure to install as a Windows Service
+   - After installation, run `.\start-mongodb.ps1` again
+
+4. **Verify MongoDB is running:**
+   ```powershell
+   # Check if process is running
+   Get-Process -Name mongod
+   
+   # Check if port 27017 is listening
+   netstat -an | Select-String "27017"
+   ```
+
+5. **Manual start (if service doesn't work):**
+   - Find MongoDB installation (usually `C:\Program Files\MongoDB\Server\<version>\bin\mongod.exe`)
+   - Create data directory: `mkdir C:\data\db`
+   - Run: `mongod.exe --dbpath C:\data\db`
+   - Keep this window open while using the app
+
+6. **Verify `.env` file:**
+   - Make sure `.env` has: `MONGO_URI=mongodb://localhost:27017/shuttle-reservation`
 
 ### Backend Won't Start
 

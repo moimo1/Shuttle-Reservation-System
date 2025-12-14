@@ -6,20 +6,34 @@ Write-Host ""
 
 # Check if MongoDB is installed and running
 Write-Host "Checking MongoDB..." -ForegroundColor Yellow
-try {
-    $mongoService = Get-Service -Name MongoDB -ErrorAction Stop
-    if ($mongoService.Status -ne 'Running') {
-        Write-Host "Starting MongoDB service..." -ForegroundColor Yellow
-        Start-Service MongoDB
-        Start-Sleep -Seconds 3
-    }
+$mongodProcess = Get-Process -Name mongod -ErrorAction SilentlyContinue
+if ($mongodProcess) {
     Write-Host "MongoDB is running ✓" -ForegroundColor Green
-} catch {
-    Write-Host "Warning: MongoDB service not found. Please install MongoDB first." -ForegroundColor Red
-    Write-Host "Download from: https://www.mongodb.com/try/download/community" -ForegroundColor Yellow
-    $continue = Read-Host "Continue anyway? (y/n)"
-    if ($continue -ne 'y') {
-        exit
+} else {
+    try {
+        $mongoService = Get-Service -Name MongoDB -ErrorAction Stop
+        if ($mongoService.Status -ne 'Running') {
+            Write-Host "Starting MongoDB service..." -ForegroundColor Yellow
+            Start-Service MongoDB
+            Start-Sleep -Seconds 3
+        }
+        Write-Host "MongoDB is running ✓" -ForegroundColor Green
+    } catch {
+        Write-Host "Warning: MongoDB is not running!" -ForegroundColor Red
+        Write-Host "Attempting to start MongoDB..." -ForegroundColor Yellow
+        
+        # Try to run the helper script
+        if (Test-Path ".\start-mongodb.ps1") {
+            & ".\start-mongodb.ps1"
+        } else {
+            Write-Host "Please install MongoDB first:" -ForegroundColor Yellow
+            Write-Host "Download from: https://www.mongodb.com/try/download/community" -ForegroundColor White
+            Write-Host "Or run: .\start-mongodb.ps1" -ForegroundColor White
+            $continue = Read-Host "Continue anyway? (y/n)"
+            if ($continue -ne 'y') {
+                exit
+            }
+        }
     }
 }
 
